@@ -1,4 +1,18 @@
-<h1>Моя игра на Angular</h1>
+<div class="game-wrapper">
+  <header>
+    <h1>Heroes of Angular</h1>
+  </header>
 
+  <main>
+    @if (gameState.isBatle().valueOf()) {
+      <app-batle></app-batle>
+    }
+    @else{
+      <app-world-map></app-world-map>
+    }
+  </main>
 
-<router-outlet></router-outlet>
+  <footer>
+    <button class="end-turn-btn">End turn</button>
+  </footer>
+</div>

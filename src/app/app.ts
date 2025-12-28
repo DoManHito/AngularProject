@@ -1,13 +1,16 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { WorldMapComponent } from './components/world-map/world-map';
+import { Batle } from "./components/batle/batle";
+import { GameState } from './services/game-state';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [WorldMapComponent, Batle],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App {
-  protected readonly title = signal('project');
+  public gameState = inject(GameState);
+  protected readonly title = 'Heroes of Angular';
 }

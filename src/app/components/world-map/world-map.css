@@ -1,0 +1,44 @@
+.map-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  background-color: #222; /* Темный фон вокруг карты */
+}
+
+.grid {
+  display: grid;
+  /* Создаем 10 колонок по 50 пикселей */
+  grid-template-columns: repeat(20, 50px);
+  /* Создаем 10 строк по 50 пикселей */
+  grid-template-rows: repeat(20, 50px);
+  border: 2px solid #555;
+}
+
+.tile {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.tile:hover {
+  filter: brightness(1.2); /* Подсветка при наведении */
+}
+
+/* Цвета для типов ландшафта */
+.grass { background-color: #4caf50; }
+.mountain { background-color: #795548; }
+.water { background-color: #2196f3; }
+
+.hero {
+  z-index: 10;
+  filter: drop-shadow(0 0 5px gold);
+}
+
+.content-icon {
+  pointer-events: none;
+}
