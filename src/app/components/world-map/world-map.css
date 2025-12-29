@@ -7,10 +7,8 @@
 
 .grid {
   display: grid;
-  /* Создаем 10 колонок по 50 пикселей */
-  grid-template-columns: repeat(20, 50px);
-  /* Создаем 10 строк по 50 пикселей */
-  grid-template-rows: repeat(20, 50px);
+  grid-template-columns: repeat(var(--map-size), 50px);
+  grid-template-rows: repeat(var(--map-size), 50px);
   border: 2px solid #555;
 }
 
@@ -33,6 +31,8 @@
 .grass { background-color: #4caf50; }
 .mountain { background-color: #795548; }
 .water { background-color: #2196f3; }
+
+.fog { background-color: #a4a4a4; }
 
 .hero {
   z-index: 10;

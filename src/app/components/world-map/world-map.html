@@ -1,20 +1,30 @@
+<button (click)="mapService.removeAllFog()">Show map</button>
+
 <div class="map-container">
   <div class="grid">
-    @for (tile of mapService.map(); track $index) {
-      <div 
-        class="tile" 
-        [class]="tile.type"
-        (click)="onTileClick($index)"
-        (keydown.enter)="onTileClick($index)"
-      >
-        @if (tile.content) {
-          <span class="content-icon">{{ tile.content.icon }}</span>
+    @for (row of mapService.map(); track $index; let x = $index){
+      @for (tile of row; track $index; let y = $index) {
+        @if (!tile.isVisible) {
+          <span class="fog"></span>
         }
+        @else {
+          <div 
+          class="tile" 
+          [class]="tile.type"
+          (click)="onTileClick({x ,y})"
+          (keydown.enter)="onTileClick({x ,y})"
+          >
+          
+          @if (tile.content) {
+            <span class="content-icon">{{ tile.content.icon }}</span>
+          }
 
-        @if (heroPosition() === $index) {
-          <div class="hero">🏇</div>
+          @if (mapService.gameState.heroPosition().x === x && mapService.gameState.heroPosition().y === y) {
+            <div class="hero">🏇</div>
+          }
+        </div>
         }
-      </div>
+      }
     }
   </div>
 </div>

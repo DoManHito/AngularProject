@@ -42,13 +42,10 @@ export interface Hero {
   defense: number;
   spellPower: number;
   knowledge: number;
-  army: (Unit | null)[];    // 7 слотов для армии, как в оригинале
-  movementPoints: number;   // Текущие очки хода
-  maxMovement: number;      // Максимум на день
-  position: Point;          // Где стоит на карте
+  army: (Unit | null)[];
 }
 
-export type TileType = 'grass' | 'dirt' | 'water' | 'mountain' | 'swamp';
+export type TileType = 'grass' | 'water' | 'mountain';
 
 export interface Tile {
   type: TileType;
@@ -59,4 +56,5 @@ export interface Tile {
     value?: any;  
     icon?: string;
   };
+  isVisible: boolean;
 }
