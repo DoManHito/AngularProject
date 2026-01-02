@@ -2,19 +2,20 @@
   display: flex;
   justify-content: center;
   padding: 20px;
-  background-color: #222; /* Темный фон вокруг карты */
+  background-color: #222;
 }
 
 .grid {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(var(--map-size), 50px);
-  grid-template-rows: repeat(var(--map-size), 50px);
+  grid-template-columns: repeat(var(--map-size), var(--tile-size));
+  grid-template-rows: repeat(var(--map-size), var(--tile-size));
   border: 2px solid #555;
 }
 
 .tile {
-  width: 50px;
-  height: 50px;
+  width: var(--tile-size);
+  height: var(--tile-size);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,11 +24,10 @@
   transition: filter 0.2s;
 }
 
-.tile:hover {
-  filter: brightness(1.2); /* Подсветка при наведении */
+.grass:hover {
+  filter: brightness(1.2);
 }
 
-/* Цвета для типов ландшафта */
 .grass { background-color: #4caf50; }
 .mountain { background-color: #795548; }
 .water { background-color: #2196f3; }
@@ -35,8 +35,25 @@
 .fog { background-color: #a4a4a4; }
 
 .hero {
+  position: absolute;
+  width: var(--tile-size);
+  height: var(--tile-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 10;
-  filter: drop-shadow(0 0 5px gold);
+  
+  transition: none; 
+  pointer-events: none;
+}
+
+.hero-image {
+  width: 90%;
+  height: 90%;
+  border-radius: 50%;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  object-fit: cover;
+  object-position: top;
 }
 
 .content-icon {

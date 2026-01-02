@@ -50,11 +50,11 @@ export type TileType = 'grass' | 'water' | 'mountain';
 export interface Tile {
   type: TileType;
   isPassable: boolean;  
+  isVisible: boolean;
   content?: {
     id: string;
     type: 'resource' | 'monster' | 'artifact' | 'castle';
     value?: any;  
     icon?: string;
   };
-  isVisible: boolean;
 }

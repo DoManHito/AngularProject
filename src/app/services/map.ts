@@ -8,39 +8,45 @@ import { GameStateService } from './game-state';
 
 export class MapService {
   public readonly gameState = inject(GameStateService);
-
   readonly MAP_SIZE = 20;
+  readonly TILE_SIZE = 50;
 
   map = signal<Tile[][]>([]);
 
   constructor() {
+    document.documentElement.style.setProperty('--map-size', this.MAP_SIZE.toString());
+    document.documentElement.style.setProperty('--tile-size', this.TILE_SIZE.toString() + 'px');
     this.generateMap();
   }
 
   // TODO: rebuild to perlin noise
+  // Generate map
   private generateMap() {
-    document.documentElement.style.setProperty('--map-size', this.MAP_SIZE.toString());
-    const newMap: Tile[][] = [];
-    for (let i = 0; i < this.MAP_SIZE; i++) {
-      const tile = <Tile[]>([]);
-      for (let j = 0; j < this.MAP_SIZE; j++) {
-        const isPassable = Math.random() < 0.25; 
-        const waterOrMauntain = (Math.random() < 0.55) ? 'mountain' : 'water';
-      
-        tile.push({
-          type: isPassable ? waterOrMauntain : 'grass',
-          isPassable: !isPassable,
-          content: isPassable ? undefined : this.generateRandomContent(),
-          isVisible: true
-        });
-      }
-      newMap.push(tile);
-    }
-    
-    this.map.set(newMap);
-    this.removeFog({x : 0, y: 0});
+    this.generateArea(); // Generate map
+    this.removeFog({x : 1, y: 1});
+    this.removeAllFog();
   }
 
+  // Generate landscape
+  private generateArea(){
+    const newMap: Tile[][] = [];
+    for (let i = 0; i < this.MAP_SIZE; i++) {
+      const row = <Tile[]>([]);
+      for (let j = 0; j < this.MAP_SIZE; j++) {
+        if(i == 0 && j == 0){ // Skip 0,0
+          this.pushIntoTile(row, true, true);
+          continue;
+        }
+        const isPassable = Math.random() < 0.8; 
+        const waterOrMauntain = (Math.random() < 0.55) ? 'mountain' : 'water';
+        this.pushIntoTile(row, isPassable, waterOrMauntain);
+      }
+      newMap.push(row);
+    }
+    this.map.set(newMap);
+  }
+
+  // Generate constent
   private generateRandomContent() {
     const rand = Math.random();
     if (rand > 0.95) return { id: '1', type: 'resource', value: 500, icon: '💰' } as const;
@@ -48,10 +54,20 @@ export class MapService {
     return undefined;
   }
 
+  pushIntoTile(row: Tile[], isPassable: boolean, waterOrMauntain: any){
+    row.push({
+      type: isPassable ? 'grass' : waterOrMauntain,
+      isPassable: isPassable,
+      content: isPassable ? this.generateRandomContent() : undefined,
+      isVisible: false
+    });
+  }
+
   // Remove fog of war around hero
   removeFog(target: Point){
-    for (let i = -1; i <= 1; i++) {
-      for (let j = -1; j <= 1; j++) {
+    const range = 2;
+    for (let i = -range; i <= range; i++) {
+      for (let j = -range; j <= range; j++) {
         if (target.x + i >= 0 && target.x + i < this.MAP_SIZE &&
             target.y + j >= 0 && target.y + j < this.MAP_SIZE) {
           this.map()[target.x + i][target.y + j].isVisible = true;
@@ -72,12 +88,10 @@ export class MapService {
   // If hero can move to point
   canMoveTo(target: Point): boolean {
     const tile = this.map()[target.x][target.y];
-    
-    return (
-      target.x >= 0 && target.x < this.MAP_SIZE &&
-      target.y >= 0 && target.y < this.MAP_SIZE &&
-      tile.isPassable
-    );
+    if(tile.isPassable){
+      return true;
+    }
+    return false;
   }
 
   // Get type of field
