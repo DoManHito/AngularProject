@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, computed } from '@angular/core';
 import { MapService } from '../../services/map';
-import { Point, Tile } from '../../models/interfaces';
+import { Point } from '../../models/interfaces';
 
 @Component({
   selector: 'app-world-map',
@@ -13,7 +13,12 @@ export class WorldMapComponent{
   constructor(public mapService: MapService) { }
   isMoving = false;
   transitionDuration = 1.1;
-  heroTransform = `translate(0px, 0px)`;
+  heroStyle = computed(() => {
+    const pos = this.mapService.gameState.heroPosition();
+    const tx = pos.y * this.mapService.TILE_SIZE;
+    const ty = pos.x * this.mapService.TILE_SIZE;
+    return `translate(${tx}px, ${ty}px)`;
+  });
 
   // After click on tile move hero
   async onTileClick(target: Point) {
@@ -23,17 +28,21 @@ export class WorldMapComponent{
     if (this.mapService.canMoveTo(target)) 
     {
       this.isMoving = true;
-      const path = this.getPath(target);
+      const path = this.getPathBFS(target);
       if(path === null){
+        this.isMoving = false;
         return;
       }
       
       for(const tile of path){
+        if(this.mapService.gameState.isBatle()){
+          break;
+        }
         await this.translateHero(tile);
+        this.mapService.removeFog(tile);
+        this.mapService.isMonsterStartFight(tile);
       }
 
-      this.mapService.removeFog(target);
-      this.mapService.isMonsterStartFight(target);
     }
     this.isMoving = false;
   }
@@ -51,55 +60,54 @@ export class WorldMapComponent{
   async translateHero(target: Point){
       this.calculateTransitionDuration(target);
 
-      const tx = target.y * this.mapService.TILE_SIZE;
-      const ty = target.x * this.mapService.TILE_SIZE;
-      this.heroTransform = `translate(${tx}px, ${ty}px)`;
-
       this.mapService.gameState.heroPosition.set(target);
 
       await this.mapService.gameState.sleep((this.transitionDuration + 0.1) * 1000);
   }
 
-  getPathASource(target : Point){
-    const pos = this.mapService.gameState.heroPosition();
-    const map = this.mapService.map();
-  }
-
   // Calculate path to point
-  getPath(target: Point){
-    const pos = this.mapService.gameState.heroPosition();
-    const map = this.mapService.map();
-    const visited = Array.from({ length: map.length }, () => 
-      new Array(map[0].length).fill(false));    
-    return this.getPathRec(map, visited, pos, target, []);
-  }
+  getPathBFS(target: Point): Point[] | null {
+    const start = this.mapService.gameState.heroPosition();
+    const queue: { point: Point; path: Point[] }[] = [];
+    queue.push({ point: start, path: [] });
 
-  getPathRec(map: Tile[][], visited: boolean[][], current: Point, target: Point, path: Point[]): Point[] | null{
-    if(current.x === target.x && current.y === target.y){
-      return [...path, current];
-    }
+    const visited = new Set<string>();
+    visited.add(`${start.x},${start.y}`);
 
-    if (
-    this.mapService.isValid(target) || visited[current.x][current.y] || this.mapService.canMoveTo(target)) {
-      return null;
-    }
+    while (queue.length > 0) {
+      const { point, path } = queue.shift()!;
 
-    visited[current.x][current.y] = true;
-    const newPath = [...path, current];
-    const neighbours = this.getNeighbours(current);
-    for(const neighbour of neighbours){
-      const result = this.getPathRec(map, visited, neighbour, target, newPath);
-      if(result){
-        return result;
+      if (point.x === target.x && point.y === target.y) {
+        return [...path, point].slice(1); 
+      }
+
+      const neighbours = this.getNeighbours(point);
+
+      for (const neighbour of neighbours) {
+        const key = `${neighbour.x},${neighbour.y}`;
+
+        if (
+          this.mapService.isValid(neighbour) && 
+          this.mapService.canMoveTo(neighbour) && 
+          !visited.has(key)
+        ) {
+          visited.add(key);
+          queue.push({
+            point: neighbour,
+            path: [...path, point]
+          });
+        }
       }
     }
+
     return null;
   }
 
   getNeighbours(p: Point){
     const neighbours: Point[] = [];
     const offsets = [
-      {x: 0, y: 1}, {x: 0, y: -1}, {x: 1, y: 0}, {x: -1, y: 0}
+      {x: 0, y: 1}, {x: 0, y: -1}, {x: 1, y: 0}, {x: -1, y: 0},
+      //{x: 1, y: 1}, {x: 1, y: -1}, {x: -1, y: 1}, {x: -1, y: -1}
     ];
 
     for (const offset of offsets) {

@@ -68,8 +68,7 @@ export class MapService {
     const range = 2;
     for (let i = -range; i <= range; i++) {
       for (let j = -range; j <= range; j++) {
-        if (target.x + i >= 0 && target.x + i < this.MAP_SIZE &&
-            target.y + j >= 0 && target.y + j < this.MAP_SIZE) {
+        if (this.isValid({x : target.x + i, y : target.y + j})) {
           this.map()[target.x + i][target.y + j].isVisible = true;
         }
       }
@@ -88,17 +87,11 @@ export class MapService {
   // Return true if point is unblocked 
   canMoveTo(target: Point): boolean {
     const tile = this.map()[target.x][target.y];
-    if(tile.isPassable && tile.isVisible){
-      return true;
-    }
-    return false;
+    return (tile.isPassable && tile.isVisible)
   }
 
   isValid(target : Point){
-    if(target.x < 0 || target.y < 0 || target.x >= this.map().length || target.y >= this.map()[0].length){
-      return false;
-    }
-    return true;
+    return !(target.x < 0 || target.y < 0 || target.x >= this.map().length || target.y >= this.map()[0].length)
   }
 
   // Get type of field
