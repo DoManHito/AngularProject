@@ -1,2 +1,9 @@
-<p>batle works!</p>
+<div class="batle-container">
+    @for (row of batleMap(); track $index) {
+        @for (tile of row; track $index) {
+            <div class="tile" 
+                [class]="tile.type"></div>
+        }
+    }
+</div>
 <button (click)="gameState.endFight()">End batle</button>

@@ -58,3 +58,8 @@ export interface Tile {
     icon?: string;
   };
 }
+
+export interface BatleFloor{
+  type: 'arena-floor' | 'arena-rock';
+  isPassable: boolean;
+}

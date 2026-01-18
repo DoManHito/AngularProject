@@ -1,0 +1,20 @@
+.batle-container {
+  display: grid;
+  justify-content: center;
+  grid-template-columns: repeat(16, 50px); 
+  grid-template-rows: repeat(8, 50px);
+  background: #333;
+  border: 4px solid #555;
+}
+
+.tile {
+  width: 50px;
+  height: 50px;
+}
+
+.arena-floor { background-color: #4caf50; }
+.arena-rock { background-color: #795548; }
+
+.arena-floor:hover{
+  filter: brightness(1.2);
+}
