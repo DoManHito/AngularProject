@@ -85,13 +85,20 @@ export class MapService {
     }
   }
 
-  // If hero can move to point
+  // Return true if point is unblocked 
   canMoveTo(target: Point): boolean {
     const tile = this.map()[target.x][target.y];
-    if(tile.isPassable){
+    if(tile.isPassable && tile.isVisible){
       return true;
     }
     return false;
+  }
+
+  isValid(target : Point){
+    if(target.x < 0 || target.y < 0 || target.x >= this.map().length || target.y >= this.map()[0].length){
+      return false;
+    }
+    return true;
   }
 
   // Get type of field

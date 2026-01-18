@@ -60,6 +60,11 @@ export class WorldMapComponent{
       await this.mapService.gameState.sleep((this.transitionDuration + 0.1) * 1000);
   }
 
+  getPathASource(target : Point){
+    const pos = this.mapService.gameState.heroPosition();
+    const map = this.mapService.map();
+  }
+
   // Calculate path to point
   getPath(target: Point){
     const pos = this.mapService.gameState.heroPosition();
@@ -75,11 +80,7 @@ export class WorldMapComponent{
     }
 
     if (
-    current.x < 0 || current.x >= map.length || 
-    current.y < 0 || current.y >= map[0].length ||
-    visited[current.x][current.y] || 
-    !map[current.x][current.y].isPassable ||
-    !map[current.x][current.y].isVisible) {
+    this.mapService.isValid(target) || visited[current.x][current.y] || this.mapService.canMoveTo(target)) {
       return null;
     }
 
