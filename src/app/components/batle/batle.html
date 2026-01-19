@@ -1,24 +1,26 @@
 <div class="batle-container">
-    @for (row of batleMap(); track $index; let rowX = $index) {
-        @for (tile of row; track $index; let rowY = $index) {
-            <div class="tile" 
-                [class]="tile.type"
-                [class.processing]="tile.status === true" 
-                (click)="onUnitClick({x:rowX, y:rowY})"
-                (keydown)="onUnitClick({x:rowX, y:rowY})">
-                <!-- {{rowX}}:{{rowY}} -->
-                @let unit = getUnitAt({x:rowX,y:rowY});
-                @if (unit) {
-                    <div class="unit">
-                        <span class="unit-img">{{ unit.image }}</span>
-                        
-                        <div class="hp-bar">
-                            <div class="hp-fill" [style.width.%]="(unit.currentHealth / unit.health) * 100"></div>
-                        </div>
-                    </div>
-                }
+    <div class="battle-grid">
+        @for (row of batleMap(); track $index; let rowX = $index) {
+            @for (tile of row; track $index; let rowY = $index) {
+                <div class="tile" 
+                    [class]="tile.type"
+                    [class.processing]="tile.status === true" 
+                    (click)="onUnitClick({x:rowX, y:rowY})"
+                    (keydown)="onUnitClick({x:rowX, y:rowY})">
+                </div>
+            }
+        }
+        @for (unit of unitsInBattle(); track unit.id) {
+            <div class="unit"
+                [style.transform]="getUnitStyle(unit)"
+                [style.transition]="'transform 1s'">
+                <span class="unit-img">{{ unit.image }}</span>
+                
+                <div class="hp-bar">
+                    <div class="hp-fill" [style.width.%]="(unit.currentHealth / unit.health) * 100"></div>
+                </div>
             </div>
         }
-    }
+    </div>
 </div>
 <button (click)="gameState.endFight()">End batle</button>

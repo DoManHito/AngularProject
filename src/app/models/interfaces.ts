@@ -21,6 +21,12 @@ export interface Resources {
 
 // Unit stats
 export interface Unit {
+  id?: string;
+  race: 'human' | 'goblin';
+  pos?: {
+      x: number;
+      y: number;
+  };
   type: 'warrior' | 'archer' | 'mage';
   level: number;
   xp: number;
@@ -28,7 +34,7 @@ export interface Unit {
   defense: number;
   health: number;
   currentHealth: number;
-  speed: number; 
+  speed: number;
   image: string; 
 }
 

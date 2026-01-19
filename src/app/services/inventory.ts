@@ -27,7 +27,8 @@ export class InventoryService {
       health: 50 + level * 10,
       currentHealth: 50 + level * 10,
       speed: 2,
-      image: UNIT_ICONS.warrior[race]
+      image: UNIT_ICONS.warrior[race],
+      race: race,
     };
     return newUnit;
   }
@@ -43,7 +44,8 @@ export class InventoryService {
       health: 30 + level * 5,
       currentHealth: 30 + level * 5,
       speed: 4,
-      image: UNIT_ICONS.archer[race]
+      image: UNIT_ICONS.archer[race],
+      race: race,
     };
     return newUnit;
   }
@@ -59,7 +61,8 @@ export class InventoryService {
       health: 20 + level * 3,
       currentHealth: 20 + level * 3,
       speed: 3,
-      image: UNIT_ICONS.mage[race]
+      image: UNIT_ICONS.mage[race],
+      race: race,
     };
     return newUnit;
   }

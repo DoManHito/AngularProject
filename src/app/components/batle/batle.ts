@@ -24,6 +24,7 @@ export class BatleComponent {
     document.documentElement.style.setProperty('--map-y', this.batleMapY.toString());
     document.documentElement.style.setProperty('--batle-tile-size', this.batleMapTileSize.toString() + 'px');
     document.documentElement.style.setProperty('--unit-size', (this.batleMapTileSize / 2).toString() + 'px');
+
     effect(() => {
       if(this.gameState.isBatle()){
         this.generateBatleMap();
@@ -31,6 +32,15 @@ export class BatleComponent {
       }
     })
   };
+
+  getUnitStyle(unit: Unit) {
+    const pos = unit.pos;
+    if (!pos) return '';
+    
+    const tx = pos.y * this.batleMapTileSize;
+    const ty = pos.x * this.batleMapTileSize;
+    return `translate(${tx}px, ${ty}px)`;
+  }
 
   generateBatleMap(){
     const newBatleMap : BatleFloor[][] = [];
@@ -50,7 +60,7 @@ export class BatleComponent {
     placeUnit(){
       const playerUnits = this.inventory.units().map((unit, index) => ({
         ...unit,
-        side: 'player',
+        id: unit.race + ' ' + index,
         pos: {x: index, y: 0}
       }))
 
@@ -58,26 +68,32 @@ export class BatleComponent {
   
       const enemyUnits = enemy.map((unit, index) => ({
         ...unit,
-        side: 'goblin',
+        race: 'goblin',
+        id: unit.race + ' ' + index,
         pos: {x: index, y: this.batleMapX - 1}
       }))
 
       this.unitsInBattle.set([...playerUnits, ...enemyUnits])
     }
 
-    getUnitAt(target : Point){
+    getUnitAt (target : Point){
       return this.unitsInBattle().find(u => (u.pos.x === target.x && u.pos.y === target.y));
     }
 
     onUnitClick(target : Point){
       const unitAtTarget : Unit = this.getUnitAt(target);
+      const currentActive = this.activeUnit();
+  
       if(unitAtTarget){
-        this.activeUnit.set(unitAtTarget);
-        this.activatePosiblePath(target, unitAtTarget.speed);
-        return;
+        if(unitAtTarget.race == 'human'){
+          this.activeUnit.set(unitAtTarget);
+          this.activatePosiblePath(target, unitAtTarget.speed);
+          return;
+        }
       }
 
-      if(this.activeUnit() && !unitAtTarget){
+      const distance = Math.abs(target.x - currentActive!.pos!.x) + Math.abs(target.y - currentActive!.pos!.y);
+      if(currentActive && distance <= currentActive.speed){
         this.changePosition(target);
       }
     }
@@ -113,51 +129,5 @@ export class BatleComponent {
   clearPosiblePath(){
     this.batleMap.update(map => 
       map.map(row => row.map(tile => ({ ...tile, status : false}))))
-  }
-
-  // TODO
-  async getPathBFS(target: Point): Promise<Point[] | null> {
-    const start = this.gameState.heroPosition();
-    const queue: { point: Point; path: Point[] }[] = [];
-
-    queue.push({ point: start, path: [] });
-
-    const visited = new Set<string>();
-    visited.add(`${start.x},${start.y}`);
-
-    while (queue.length > 0) {
-      const { point, path } = queue.shift()!;
-
-      if (point.x === target.x && point.y === target.y) {
-        return [...path, point].slice(1); 
-      }
-
-      const neighbours = this.getNeighbours(point);
-
-      for (const neighbour of neighbours) {
-        const key = `${neighbour.x},${neighbour.y}`;
-
-        if (!visited.has(key)) {
-          visited.add(key);
-
-          queue.push({point: neighbour, path: [...path, point]});
-        }
-      }
-    }
-
-    return null;
-  }
-
-  getNeighbours(p: Point){
-    const neighbours: Point[] = [];
-    const offsets = [
-      {x: 0, y: 1}, {x: 0, y: -1}, {x: 1, y: 0}, {x: -1, y: 0},
-      //{x: 1, y: 1}, {x: 1, y: -1}, {x: -1, y: 1}, {x: -1, y: -1}
-    ];
-
-    for (const offset of offsets) {
-      neighbours.push({ x: p.x + offset.x, y: p.y + offset.y });
-    }
-    return neighbours;
   }
 }
