@@ -9,6 +9,10 @@
           <div 
             class="tile" 
             [class]="tile.type"
+             
+            [class.visited]="tile.status === 'visited'"
+            [class.processing]="tile.status === 'processing'"
+            
             (click)="onTileClick({x ,y})"
             (keydown.enter)="onTileClick({x ,y})">
 

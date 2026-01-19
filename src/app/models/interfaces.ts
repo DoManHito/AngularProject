@@ -17,22 +17,35 @@ export interface Resources {
   gold: number;
   wood: number;
   ore: number;
-  mercury: number;
 }
 
 // Unit stats
 export interface Unit {
-  id: string;
-  name: string;
+  type: 'warrior' | 'archer' | 'mage';
   level: number;
+  xp: number;
   damage: number; 
   defense: number;
   health: number;
   currentHealth: number;
   speed: number; 
-  quantity: number;
   image: string; 
 }
+
+export const UNIT_ICONS = {
+  warrior: {
+    human: '⚔️',
+    goblin: '🗡️'
+  },
+  archer: {    
+    human: '🏹',
+    goblin: '🎯'
+  },
+  mage: {
+    human: '🧙‍♂️',
+    goblin: '🧪'
+  }
+};
 
 // Hero stats
 export interface Hero {
@@ -57,6 +70,7 @@ export interface Tile {
     value?: any;  
     icon?: string;
   };
+  status?: 'visited' | 'processing';
 }
 
 export interface BatleFloor{

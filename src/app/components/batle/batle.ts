@@ -1,6 +1,7 @@
 import { Component, effect, signal } from '@angular/core';
 import { GameStateService } from '../../services/game-state';
-import { BatleFloor } from '../../models/interfaces';
+import { BatleFloor, Point, Unit } from '../../models/interfaces';
+import { InventoryService } from '../../services/inventory';
 
 @Component({
   selector: 'app-batle',
@@ -10,22 +11,27 @@ import { BatleFloor } from '../../models/interfaces';
 })
 
 export class BatleComponent {
-  constructor(public gameState : GameStateService) {
+  batleMap = signal<BatleFloor[][]>([]);
+  unitsInBattle = signal<any[]>([]);
+  activeUnit = signal<Unit | null>(null);
+  
+  batleMapX = 16;
+  batleMapY = 8;
+
+  constructor(public gameState : GameStateService, public inventory : InventoryService) {
     effect(() => {
       if(this.gameState.isBatle()){
         this.generateBatleMap();
+        this.placeUnit();
       }
     })
   };
-  batleMap = signal<BatleFloor[][]>([]);
-  batleMapX = 16;
-  balteMapY = 8;
 
   generateBatleMap(){
     const newBatleMap : BatleFloor[][] = [];
-    for (let i = 0; i < this.batleMapX; i++) {
+    for (let i = 0; i < this.batleMapY; i++) {
       const row : BatleFloor[] = [];
-      for (let j = 0; j < this.balteMapY; j++) {
+      for (let j = 0; j < this.batleMapX; j++) {
         row.push({
           type: 'arena-floor',
           isPassable: true,
@@ -35,4 +41,38 @@ export class BatleComponent {
     }
     this.batleMap.set(newBatleMap);
   }
+
+    placeUnit(){
+      const playerUnits = this.inventory.units().map((unit, index) => ({
+        ...unit,
+        side: 'player',
+        pos: {x: index, y: 0}
+      }))
+
+      const enemy = [this.inventory.getWarrior(1, 'goblin')];
+      const enemyUnits = enemy.map((unit, index) => ({
+        ...unit,
+        side: 'goblin',
+        pos: {x: index, y: this.batleMapX - 1}
+      }))
+
+      this.unitsInBattle.set([...playerUnits, ...enemyUnits])
+    }
+
+    getUnitAt(target : Point){
+      return this.unitsInBattle().find(u => (u.pos.x === target.x && u.pos.y === target.y));
+    }
+
+    onUnitClick(target : Point){
+      const unit = this.getUnitAt(target);
+
+      if(unit){
+        this.activeUnit.set(unit);
+        return;
+      }
+
+      if(this.activeUnit() && !unit){
+        
+      }
+    }
 }

@@ -34,7 +34,7 @@ export class WorldMapComponent{
         return;
       }
       
-      for(const tile of path){
+      for(const tile of await path ?? []){
         if(this.mapService.gameState.isBatle()){
           break;
         }
@@ -66,9 +66,14 @@ export class WorldMapComponent{
   }
 
   // Calculate path to point
-  getPathBFS(target: Point): Point[] | null {
+  async getPathBFS(target: Point): Promise<Point[] | null> {
     const start = this.mapService.gameState.heroPosition();
     const queue: { point: Point; path: Point[] }[] = [];
+    
+    // For visualisation
+    //this.clearVisualization();
+    //const map = this.mapService.map();
+
     queue.push({ point: start, path: [] });
 
     const visited = new Set<string>();
@@ -80,29 +85,39 @@ export class WorldMapComponent{
       if (point.x === target.x && point.y === target.y) {
         return [...path, point].slice(1); 
       }
+      else{
+        // For visualisation
+        //map[point.x][point.y].status = 'visited';
+      }
 
       const neighbours = this.getNeighbours(point);
 
       for (const neighbour of neighbours) {
         const key = `${neighbour.x},${neighbour.y}`;
 
-        if (
-          this.mapService.isValid(neighbour) && 
-          this.mapService.canMoveTo(neighbour) && 
-          !visited.has(key)
-        ) {
+        if (this.mapService.isValid(neighbour) && this.mapService.canMoveTo(neighbour) && !visited.has(key)) {
           visited.add(key);
-          queue.push({
-            point: neighbour,
-            path: [...path, point]
-          });
+
+          // For visualisation
+          //map[neighbour.x][neighbour.y].status = 'processing';
+
+          queue.push({point: neighbour, path: [...path, point]});
         }
       }
+      // For visualisation
+      //await this.mapService.gameState.sleep(10);
     }
 
     return null;
   }
 
+  // For visualisation
+  clearVisualization() {
+    const map = this.mapService.map();
+    map.forEach(row => row.forEach(tile => tile.status = undefined));
+  }
+
+  // Get neighbours for point
   getNeighbours(p: Point){
     const neighbours: Point[] = [];
     const offsets = [

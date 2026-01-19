@@ -1,8 +1,21 @@
 <div class="batle-container">
-    @for (row of batleMap(); track $index) {
-        @for (tile of row; track $index) {
+    @for (row of batleMap(); track $index; let rowX = $index) {
+        @for (tile of row; track $index; let rowY = $index) {
             <div class="tile" 
-                [class]="tile.type"></div>
+                [class]="tile.type" 
+                (click)="onUnitClick({x:rowX, y:rowY})"
+                (keydown)="onUnitClick({x:rowX, y:rowY})">{{rowX}}:{{rowY}}
+                @let unit = getUnitAt({x:rowX,y:rowY});
+                @if (unit) {
+                    <div class="unit">
+                        <span class="unit-img">{{ unit.image }}</span>
+                        
+                        <div class="hp-bar">
+                            <div class="hp-fill" [style.width.%]="(unit.currentHealth / unit.health) * 100"></div>
+                        </div>
+                    </div>
+                }
+            </div>
         }
     }
 </div>
