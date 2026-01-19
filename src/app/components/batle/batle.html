@@ -2,9 +2,11 @@
     @for (row of batleMap(); track $index; let rowX = $index) {
         @for (tile of row; track $index; let rowY = $index) {
             <div class="tile" 
-                [class]="tile.type" 
+                [class]="tile.type"
+                [class.processing]="tile.status === true" 
                 (click)="onUnitClick({x:rowX, y:rowY})"
-                (keydown)="onUnitClick({x:rowX, y:rowY})">{{rowX}}:{{rowY}}
+                (keydown)="onUnitClick({x:rowX, y:rowY})">
+                <!-- {{rowX}}:{{rowY}} -->
                 @let unit = getUnitAt({x:rowX,y:rowY});
                 @if (unit) {
                     <div class="unit">

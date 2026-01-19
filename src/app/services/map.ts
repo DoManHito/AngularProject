@@ -22,7 +22,7 @@ export class MapService {
   // TODO: rebuild to perlin noise
   // Generate map
   private generateMap() {
-    this.generateArea(); // Generate map
+    this.generateArea();
     this.removeFog({x : 1, y: 1});
     this.removeAllFog();
   }

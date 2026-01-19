@@ -76,4 +76,5 @@ export interface Tile {
 export interface BatleFloor{
   type: 'arena-floor' | 'arena-rock';
   isPassable: boolean;
+  status?: boolean;
 }
