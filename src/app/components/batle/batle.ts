@@ -92,7 +92,7 @@ export class BatleComponent {
         }
       }
 
-      const distance = Math.abs(target.x - currentActive!.pos!.x) + Math.abs(target.y - currentActive!.pos!.y);
+      const distance = Math.abs(target.x - currentActive!.pos.x) + Math.abs(target.y - currentActive!.pos.y);
       if(currentActive && distance <= currentActive.speed){
         this.changePosition(target);
       }

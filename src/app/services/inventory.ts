@@ -29,6 +29,7 @@ export class InventoryService {
       speed: 2,
       image: UNIT_ICONS.warrior[race],
       race: race,
+      pos: {x:0,y:0},
     };
     return newUnit;
   }
@@ -46,6 +47,7 @@ export class InventoryService {
       speed: 4,
       image: UNIT_ICONS.archer[race],
       race: race,
+      pos: {x:0,y:0},
     };
     return newUnit;
   }
@@ -63,6 +65,7 @@ export class InventoryService {
       speed: 3,
       image: UNIT_ICONS.mage[race],
       race: race,
+      pos: {x:0,y:0},
     };
     return newUnit;
   }

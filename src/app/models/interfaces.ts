@@ -23,7 +23,7 @@ export interface Resources {
 export interface Unit {
   id?: string;
   race: 'human' | 'goblin';
-  pos?: {
+  pos: {
       x: number;
       y: number;
   };
