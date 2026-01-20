@@ -13,13 +13,16 @@ import { InventoryService } from '../../services/inventory';
 export class BatleComponent {
   isStats = signal<boolean>(false);
   selectedUnitId: string | undefined = undefined;
+
   batleMap = signal<BatleFloor[][]>([]);
-  unitsInBattle = signal<any[]>([]);
+  unitsInBattle = signal<Unit[]>([]);
   activeUnit = signal<Unit | null>(null);
+
+  currentTurnIndex = 0;
+
   turnQueue = computed(() => {
     return [...this.unitsInBattle()]
       .sort((a, b) => b.speed - a.speed)
-      .slice(0, 10);
   });
   
   readonly batleMapX = 12;
@@ -36,9 +39,52 @@ export class BatleComponent {
       if(this.gameState.isBatle()){
         this.generateBatleMap();
         this.placeUnit();
+
+        setTimeout(() => this.startBattle(), 100);
       }
     })
   };
+
+  startBattle() {
+    this.currentTurnIndex = -1;
+    this.nextTurn();
+  }
+
+  nextTurn() {
+    const queue = this.turnQueue();
+    if (queue.length === 0) return;
+
+    this.currentTurnIndex++;
+    
+    if (this.currentTurnIndex >= queue.length) {
+      this.currentTurnIndex = 0;
+    }
+
+    const nextUnit = queue[this.currentTurnIndex];
+    this.activeUnit.set(nextUnit);
+    this.selectedUnitId = nextUnit.id;
+
+    if (nextUnit.race === 'human') {
+        this.activatePosiblePath(nextUnit.pos, nextUnit.speed);
+    } else {
+        this.clearPosiblePath();
+        this.processEnemyTurn(nextUnit);
+    }
+  }
+
+  // TODO action
+  processEnemyTurn(enemy: Unit) {
+    setTimeout(() => {
+      
+      this.finishAction(); 
+    }, 1000);
+  }
+
+  finishAction() {
+    this.clearPosiblePath();
+    this.activeUnit.set(null);
+    this.nextTurn();
+  }
 
   openStats(){
     this.isStats.set(!this.isStats());
@@ -142,19 +188,14 @@ export class BatleComponent {
   }
 
   onUnitClick(target : Point){
-    const unitAtTarget : Unit = this.getUnitAt(target);
     const currentActive = this.activeUnit();
 
-    if(unitAtTarget){
-      if(unitAtTarget.race == 'human'){
-        this.activeUnit.set(unitAtTarget);
-        this.activatePosiblePath(target, unitAtTarget.speed);
-        return;
-      }
-    }
+    if(!currentActive) return;
+    if(currentActive.race !== 'human') return;
 
-    const distance = Math.abs(target.x - currentActive!.pos.x) + Math.abs(target.y - currentActive!.pos.y);
-    if(currentActive && distance <= currentActive.speed){
+    const distance = Math.abs(target.x - currentActive.pos.x) + Math.abs(target.y - currentActive.pos.y);
+    const unitAtTarget = this.getUnitAt(target);
+    if(!unitAtTarget && distance <= currentActive.speed){
       this.changePosition(target);
     }
   }
@@ -168,8 +209,7 @@ export class BatleComponent {
         return u;
       })
     );
-    this.clearPosiblePath()
-    this.activeUnit.set(null);
+    this.finishAction();
   }
 
   activatePosiblePath(startPos : Point, speed : number){

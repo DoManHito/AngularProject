@@ -6,6 +6,7 @@ import { Injectable } from '@angular/core';
 export class Interfaces {
   
 }
+
 // Coordinates on map
 export interface Point {
   x: number;
@@ -17,6 +18,13 @@ export interface Resources {
   gold: number;
   wood: number;
   ore: number;
+}
+
+export interface Spell{
+  damageFactor: number;
+  name: string;
+  type: string;
+  icon: string;
 }
 
 // Unit stats
@@ -36,6 +44,7 @@ export interface Unit {
   currentHealth: number;
   speed: number;
   image: string; 
+  spells: Spell[];
 }
 
 export const UNIT_ICONS = {

@@ -9,13 +9,14 @@ import { GameStateService } from './game-state';
 export class MapService {
   public readonly gameState = inject(GameStateService);
   readonly MAP_SIZE = 20;
-  readonly TILE_SIZE = 50;
+  readonly TILE_SIZE = 60;
 
   map = signal<Tile[][]>([]);
 
   constructor() {
     document.documentElement.style.setProperty('--map-size', this.MAP_SIZE.toString());
     document.documentElement.style.setProperty('--tile-size', this.TILE_SIZE.toString() + 'px');
+    document.documentElement.style.setProperty('--content-size', (this.TILE_SIZE / 2).toString() + 'px');
     this.generateMap();
   }
 

@@ -6,20 +6,6 @@
 </button>
 
 <div class="game-wrapper">
-    <div class="turn-queue">
-        @for (unit of turnQueue(); track $index) {
-        <div class="queue-item" 
-            [class.enemy]="unit.race === 'goblin'"
-            [class.selected]="selectedUnitId === unit.id"
-            [style.--i]="$index"
-            (keydown)="selectUnitFromQueue(unit)"><span class="queue-unit-img">{{ unit.image }}</span>
-            <div class="queue-unit-info">
-                <span class="level">lvl {{ unit.level }}</span>
-            </div>
-            @if ($first) { <div class="active-pointer">▼</div> }
-        </div>
-        }
-    </div>
     <div class="batle-container">
         <div class="battle-grid">
             @for (row of batleMap(); track $index; let rowX = $index) {
@@ -35,15 +21,34 @@
             @for (unit of unitsInBattle(); track unit.id) {
                 <div class="unit"
                     [style.transform]="getUnitStyle(unit)"
-                    [style.transition]="'transform 1s'">
+                    [style.transition]="'transform 1s'"
+                    [class.enemy]="unit.race === 'goblin'"
+                    [class.active-unit-on-map]="activeUnit()?.id === unit.id">
                     <span class="unit-img">{{ unit.image }}</span>
+
+                    @if (activeUnit()?.id === unit.id) {
+                        @if (activeUnit()?.race === 'human') {
+                            <div class="spells-container">
+                                @for (spell of unit.spells; track spell.name) {
+                                    <div class="spell"
+                                        [class]="'type-' + spell.type">
+                                        <img [src]="spell.icon" [alt]="spell.name" />
+                                        <div class="spell-tooltip">{{ spell.name }}</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                            
+                        <div class="unit-aura"></div>
+                    }
 
                     @if (isStats()) {
                         <div class="unit-stats" [class.visible]="selectedUnitId === unit.id">
-                            <div class="stats-header">{{ unit.race }} ({{ unit.id }})</div>
+                            <div class="stats-header">{{ unit.race }} {{ unit.type }}</div>
                             <div class="stats-row">HP: <span>{{ unit.currentHealth }}/{{ unit.health }}</span></div>
                             <div class="stats-row">DMG: <span>{{ unit.damage }}</span></div>
                             <div class="stats-row">SPD: <span>{{ unit.speed }}</span></div>
+                            <div class="stats-row">LVL: <span>{{ unit.level }}</span></div>
                         </div>
                     }
                     
@@ -54,4 +59,21 @@
             }
         </div>
     </div>
+        
+    <div class="turn-queue">
+        @for (unit of turnQueue().slice(0, 10); track unit.id; let i = $index) {
+            <div class="queue-item" 
+                [class.enemy]="unit.race === 'goblin'"
+                [class.active-turn]="activeUnit()?.id === unit.id"
+                [style.--i]="i">
+                
+                <span class="queue-unit-img">{{ unit.image }}</span>
+                
+                <div class="queue-unit-info">
+                    <span class="level">lvl {{ unit.level }}</span>
+                </div>
+            </div>
+        }
+    </div>
+
 </div>

@@ -30,6 +30,12 @@ export class InventoryService {
       image: UNIT_ICONS.warrior[race],
       race: race,
       pos: {x:0,y:0},
+      spells: [{
+        damageFactor : 1,
+        name: 'Powerful hit',
+        type: 'hit',
+        icon: 'a',
+      }],
     };
     return newUnit;
   }
@@ -48,6 +54,12 @@ export class InventoryService {
       image: UNIT_ICONS.archer[race],
       race: race,
       pos: {x:0,y:0},
+      spells: [{
+        damageFactor : 1,
+        name: 'Empower shot',
+        type: 'shot',
+        icon: 'arrow.png',
+      }],
     };
     return newUnit;
   }
@@ -66,6 +78,12 @@ export class InventoryService {
       image: UNIT_ICONS.mage[race],
       race: race,
       pos: {x:0,y:0},
+      spells: [{
+        damageFactor : 1,
+        name: 'Fireball',
+        type: 'fireball',
+        icon: `fireball.png`,
+      }],
     };
     return newUnit;
   }
