@@ -25,7 +25,7 @@ export class BatleComponent {
       .sort((a, b) => b.speed - a.speed)
   });
   
-  readonly batleMapX = 12;
+  readonly batleMapX = 10;
   readonly batleMapY = this.batleMapX / 2;
   readonly batleMapTileSize = 120;
 
@@ -187,7 +187,7 @@ export class BatleComponent {
     return this.unitsInBattle().find(u => (u.pos.x === target.x && u.pos.y === target.y));
   }
 
-  onUnitClick(target : Point){
+  onTileClick(target : Point){
     const currentActive = this.activeUnit();
 
     if(!currentActive) return;
@@ -195,6 +195,7 @@ export class BatleComponent {
 
     const distance = Math.abs(target.x - currentActive.pos.x) + Math.abs(target.y - currentActive.pos.y);
     const unitAtTarget = this.getUnitAt(target);
+
     if(!unitAtTarget && distance <= currentActive.speed){
       this.changePosition(target);
     }

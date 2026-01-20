@@ -33,8 +33,8 @@ export class InventoryService {
       spells: [{
         damageFactor : 1,
         name: 'Powerful hit',
-        type: 'hit',
-        icon: 'a',
+        type: 'swish',
+        icon: 'swish.png',
       }],
     };
     return newUnit;
