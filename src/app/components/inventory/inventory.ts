@@ -8,8 +8,9 @@ import { InventoryService } from '../../services/inventory';
   styleUrl: './inventory.css',
 })
 export class InventoryComponent {
-  constructor(public inv : InventoryService) {}
-  openInventory(){
-    alert("open")
+  isOpen = false;
+  constructor(public inventoryService : InventoryService) {}
+  toggleInventory(){
+    this.isOpen = !this.isOpen;
   }
 }

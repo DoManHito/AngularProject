@@ -1,4 +1,4 @@
-import { Component, effect, signal } from '@angular/core';
+import { Component, computed, effect, signal } from '@angular/core';
 import { GameStateService } from '../../services/game-state';
 import { BatleFloor, Point, Unit } from '../../models/interfaces';
 import { InventoryService } from '../../services/inventory';
@@ -11,9 +11,16 @@ import { InventoryService } from '../../services/inventory';
 })
 
 export class BatleComponent {
+  isStats = signal<boolean>(false);
+  selectedUnitId: string | undefined = undefined;
   batleMap = signal<BatleFloor[][]>([]);
   unitsInBattle = signal<any[]>([]);
   activeUnit = signal<Unit | null>(null);
+  turnQueue = computed(() => {
+    return [...this.unitsInBattle()]
+      .sort((a, b) => b.speed - a.speed)
+      .slice(0, 10);
+  });
   
   readonly batleMapX = 12;
   readonly batleMapY = this.batleMapX / 2;
@@ -32,6 +39,18 @@ export class BatleComponent {
       }
     })
   };
+
+  openStats(){
+    this.isStats.set(!this.isStats());
+  }
+
+  selectUnitFromQueue(unit: Unit) {
+    if (this.selectedUnitId === unit.id) {
+      this.selectedUnitId = undefined;
+    } else {
+      this.selectedUnitId = unit.id;
+    }
+  }
 
   getUnitStyle(unit: Unit) {
     const pos = unit.pos;
@@ -57,59 +76,101 @@ export class BatleComponent {
     this.batleMap.set(newBatleMap);
   }
 
-    placeUnit(){
-      const playerUnits = this.inventory.units().map((unit, index) => ({
-        ...unit,
-        id: unit.race + ' ' + index,
-        pos: {x: index, y: 0}
-      }))
+  placeUnit(){
+    const playerUnits = this.inventory.units().map((unit, index) => ({
+      ...unit,
+      id: unit.race + ' ' + index,
+      pos: {x: index, y: 0}
+    }))
 
-      const enemy = [this.inventory.getWarrior(1, 'goblin')];
-  
-      const enemyUnits = enemy.map((unit, index) => ({
-        ...unit,
-        race: 'goblin',
-        id: unit.race + ' ' + index,
-        pos: {x: index, y: this.batleMapX - 1}
-      }))
+    const enemy = this.generateEnemy(playerUnits);
 
-      this.unitsInBattle.set([...playerUnits, ...enemyUnits])
+    const enemyUnits = enemy.map((unit, index) => ({
+      ...unit,
+      id: unit.race + ' ' + index,
+      pos: {x: index, y: this.batleMapX - 1}
+    }))
+
+    this.unitsInBattle.set([...playerUnits, ...enemyUnits])
+  }
+      
+  generateEnemy(playerUnits: Unit[]): Unit[] {
+    const enemy: Unit[] = [];
+    
+    const avgLevel = Math.round(playerUnits.reduce((sum, u) => sum + u.level, 0) / playerUnits.length);
+
+    const enemyCount = Math.max(1, playerUnits.length + (Math.floor(Math.random() * 4) - 1));
+
+    const types = ['warrior', 'archer', 'mage'];
+
+    for (let i = 0; i < enemyCount; i++) {
+      const randomType = types[Math.floor(Math.random() * types.length)];
+      
+      const enemyLevel = Math.max(1, avgLevel + (Math.floor(Math.random() * 3) - 1));
+
+      let newEnemy: Unit;
+      if (randomType === 'archer') {
+        newEnemy = this.inventory.getArcher(enemyLevel, 'goblin');
+      } else if (randomType === 'warrior') {
+        newEnemy = this.inventory.getWarrior(enemyLevel, 'goblin');
+      } else {
+        newEnemy = this.inventory.getMage(enemyLevel, 'goblin');
+      }
+
+      newEnemy = this.applyRandomStats(newEnemy);
+
+      enemy.push(newEnemy);
     }
 
-    getUnitAt (target : Point){
-      return this.unitsInBattle().find(u => (u.pos.x === target.x && u.pos.y === target.y));
+    return enemy;
+  }
+
+  applyRandomStats(unit: Unit): Unit {
+    const variation = 0.1;
+    const factor = 1 + (Math.random() * variation * 2 - variation);
+
+    unit.damage = Math.round(unit.damage * factor);
+    unit.defense = Math.round(unit.defense * factor);
+    unit.health = Math.round(unit.health * factor);
+    unit.currentHealth = unit.health;
+    
+    return unit;
+  }
+
+  getUnitAt (target : Point){
+    return this.unitsInBattle().find(u => (u.pos.x === target.x && u.pos.y === target.y));
+  }
+
+  onUnitClick(target : Point){
+    const unitAtTarget : Unit = this.getUnitAt(target);
+    const currentActive = this.activeUnit();
+
+    if(unitAtTarget){
+      if(unitAtTarget.race == 'human'){
+        this.activeUnit.set(unitAtTarget);
+        this.activatePosiblePath(target, unitAtTarget.speed);
+        return;
+      }
     }
 
-    onUnitClick(target : Point){
-      const unitAtTarget : Unit = this.getUnitAt(target);
-      const currentActive = this.activeUnit();
-  
-      if(unitAtTarget){
-        if(unitAtTarget.race == 'human'){
-          this.activeUnit.set(unitAtTarget);
-          this.activatePosiblePath(target, unitAtTarget.speed);
-          return;
+    const distance = Math.abs(target.x - currentActive!.pos.x) + Math.abs(target.y - currentActive!.pos.y);
+    if(currentActive && distance <= currentActive.speed){
+      this.changePosition(target);
+    }
+  }
+
+  changePosition(target: Point){
+    this.unitsInBattle.update(units => 
+      units.map(u => {
+        if (this.activeUnit() === u){
+          return {...u, pos: {...target}};
         }
-      }
-
-      const distance = Math.abs(target.x - currentActive!.pos.x) + Math.abs(target.y - currentActive!.pos.y);
-      if(currentActive && distance <= currentActive.speed){
-        this.changePosition(target);
-      }
-    }
-
-    changePosition(target: Point){
-      this.unitsInBattle.update(units => 
-        units.map(u => {
-          if (this.activeUnit() === u){
-            return {...u, pos: {...target}};
-          }
-          return u;
-        })
-      );
-      this.clearPosiblePath()
-      this.activeUnit.set(null);
-    }
+        return u;
+      })
+    );
+    this.clearPosiblePath()
+    this.activeUnit.set(null);
+  }
 
   activatePosiblePath(startPos : Point, speed : number){
     this.batleMap.update(map => {

@@ -1,0 +1,38 @@
+.title-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 0;
+  width: 100%;
+}
+
+.game-title {
+  font-family: 'Arial Black', Gadget, sans-serif;
+  font-size: 5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  
+  background: linear-gradient(to bottom, #ffd700 20%, #b8860b 50%, #8b4513 80%);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  
+  filter: drop-shadow(0 5px 0 #333) 
+          drop-shadow(0 10px 10px rgba(0,0,0,0.8));
+          
+  animation: titleFloat 3s ease-in-out infinite;
+  
+  margin: 0;
+  text-align: center;
+}
+
+@keyframes titleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@media (max-width: 768px) {
+  .game-title {
+    font-size: 2.5rem;
+  }
+}

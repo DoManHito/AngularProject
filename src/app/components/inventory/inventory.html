@@ -1,3 +1,28 @@
-<button class="inventory-toggle" (click)="openInventory()">
-    🎒 Inventory
+<button class="open-btn" (click)="toggleInventory()">
+  {{ isOpen ? 'Close' : 'Inventory' }}
 </button>
+
+@if (isOpen) {
+  <div class="inventory-window">
+    <div class="inventory-header">
+      <h2>Your Army</h2>
+      </div>
+    
+    <div class="inventory-grid">
+      @for (unit of inventoryService.units(); track unit.id) {
+        <div class="inventory-slot" [class]="unit.race">
+          <span class="unit-icon">{{ unit.image }}</span>
+          <div class="unit-badge">{{ unit.level }}</div>
+          <div class="unit-tooltip">
+            <strong>{{ unit.type }}</strong>
+            <span>HP: {{ unit.health }}</span>
+            <span>DMG: {{ unit.damage }}</span>
+          </div>
+        </div>
+      }
+      @for (i of [1,2,3,4,5]; track $index) {
+        <div class="inventory-slot empty"></div>
+      }
+    </div>
+  </div>
+}
