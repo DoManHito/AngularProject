@@ -262,7 +262,7 @@ export class BatleComponent {
       const tile = map[unit.pos.x][unit.pos.y];
       
       if (tile.isAtack) {
-        const damageTaken = this.activatedSpell!.damageFactor * this.activeUnit()!.damage; 
+        const damageTaken = this.activatedSpell!.damageFactor * this.activeUnit()!.damage - unit.defense; 
         const newHealth = Math.max(0, unit.currentHealth - damageTaken);
         
         return { ...unit, currentHealth: newHealth };
@@ -297,6 +297,14 @@ export class BatleComponent {
           return u;
         });
       });
+
+      const newQueue = this.turnQueue();
+      const newIndex = newQueue.findIndex(u => u.id === attackerId);
+      if (newIndex === -1) {
+        this.currentTurnIndex--; 
+      } else {
+        this.currentTurnIndex = newIndex;
+      }
     }
     if(this.checkEndFight()) return;
   }
@@ -304,6 +312,7 @@ export class BatleComponent {
   checkEndFight() : boolean{
     const enemy = this.unitsInBattle().filter(u => u.race === 'goblin');
     this.activeUnit.set(null);
+
     if(enemy.length === 0){
       const tile = this.gameState.currentTile();
       if(!tile) return false;
@@ -311,6 +320,7 @@ export class BatleComponent {
       setTimeout(() => this.endBatle(), 1000);
       return true;
     }
+
     const ally = this.unitsInBattle().filter(u => u.race === 'human');
     if(ally.length === 0){
       setTimeout(() => this.endBatle(), 1000);
@@ -330,21 +340,146 @@ export class BatleComponent {
   }
 
   endBatle(){
-    const survivors = this.unitsInBattle().filter(u => u.race === 'human');
+    const survivors = this.unitsInBattle().filter(u => u.race === 'human' && u.currentHealth > 0);
     this.inventory.units.update(inventoryUnits => {
       return inventoryUnits.map(invUnit => {
         const updatedUnit = survivors.find(s => s.id === invUnit.id);
         return updatedUnit ? { ...updatedUnit } : invUnit;
-      });
+      })
+      .filter(invUnit => {
+        return survivors.some(s => s.id === invUnit.id);
+      });;
     });
     this.gameState.isBatle.set(false);
   }
 
-  // TODO action
   processEnemyTurn(enemy: Unit) {
     setTimeout(() => {
-      
-      this.finishAction(); 
+      const units = this.unitsInBattle();
+      const target = this.findClosestTarget(enemy, units);
+
+      if (!target) {
+        this.finishAction();
+        return;
+      }
+
+      const bestSpell = this.getBestAvailableSpell(enemy, target);
+      const distance = Math.abs(target.pos.x - enemy.pos.x) + Math.abs(target.pos.y - enemy.pos.y);
+
+      // TODO loop
+      if (bestSpell) {
+        this.performEnemyAttack(enemy, target, bestSpell);
+      }
+      else if (distance <= 1) {
+        this.performEnemyAttack(enemy, target);
+      } else {
+        this.moveEnemyTowards(enemy, target);
+      }
+
     }, 1000);
+  }
+
+  findClosestTarget(me: Unit, allUnits: Unit[]): Unit | null {
+    const targets = allUnits.filter(u => u.race === 'human' && u.currentHealth > 0);
+    if (targets.length === 0) return null;
+
+    let closest = targets[0];
+    let minDistancce = 10000;
+
+    for (const t of targets) {
+      const dst = Math.abs(t.pos.x - me.pos.x) + Math.abs(t.pos.y - me.pos.y);
+      if (dst < minDistancce) {
+        minDistancce = dst;
+        closest = t;
+      }
+    }
+    return closest;
+  }
+
+  performEnemyAttack(attacker: Unit, victim: Unit, spell?: Spell) {
+    
+    if (spell) {
+      const hitCoords = new Set(
+        spell.range.map(offset => `${attacker.pos.x - offset.x},${attacker.pos.y - offset.y}`)
+      );
+
+      this.batleMap.update(map => map.map((row, x) => 
+        row.map((tile, y) => ({
+          ...tile,
+          isAtack: hitCoords.has(`${x},${y}`)
+        }))
+      ));
+
+      setTimeout(() => {
+        this.applyDamage(attacker, spell, hitCoords);
+      }, 500);
+
+    } else {
+      const hitCoords = new Set([`${victim.pos.x},${victim.pos.y}`]);
+      this.applyDamage(attacker, undefined, hitCoords);
+    }
+  }
+
+  getBestAvailableSpell(attacker: Unit, target: Unit): Spell | undefined {
+    if (!attacker.spells || attacker.spells.length === 0) return undefined;
+
+    return attacker.spells.find(spell => {
+      return spell.range.some(offset => {
+        const hitX = attacker.pos.x - offset.x;
+        const hitY = attacker.pos.y - offset.y;
+        return hitX === target.pos.x && hitY === target.pos.y;
+      });
+    });
+  }
+
+  moveEnemyTowards(attacker: Unit, target: Unit) {
+    let newX = attacker.pos.x;
+    let newY = attacker.pos.y;
+
+    const diffX = attacker.pos.x - target.pos.x;
+    const diffY = attacker.pos.y - target.pos.y;
+
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      newX -= Math.sign(diffX);
+    } else {
+      newY -=  Math.sign(diffY);
+    }
+
+    alert(newX + ' ' + newY)
+    if (this.isTileFree(newX, newY)) {
+      this.changePosition({x: newX, y: newY})
+    }
+
+    setTimeout(() => this.finishAction(), 500);
+  }
+
+  isTileFree(x: number, y: number): boolean {
+    if (x < 0 || y < 0 || x >= this.batleMapY || y >= this.batleMapX) return false;
+    return !this.unitsInBattle().some(u => u.pos.x === x && u.pos.y === y && u.currentHealth > 0);
+  }
+
+  private applyDamage(attacker: Unit, spell: Spell | undefined, hitCoords: Set<string>) {
+    this.unitsInBattle.update(units => units.map(u => {
+      if (hitCoords.has(`${u.pos.x},${u.pos.y}`)) {
+        
+        let damage = attacker.damage;
+        
+        if (spell) {
+          damage = Math.round(damage * spell.damageFactor);
+        }
+
+        const finalDamage = Math.max(1, damage - u.defense);
+        return { ...u, currentHealth: Math.max(0, u.currentHealth - finalDamage) };
+      }
+      return u;
+    }));
+
+    if (spell) {
+      setTimeout(() => this.clearActivatedSpells(), 300);
+    }
+
+    this.checkDeads();
+    
+    setTimeout(() => this.finishAction(), 800);
   }
 }

@@ -18,7 +18,7 @@
                         [class.processing]="tile.isProcessing" 
                         [class.atack]="tile.isAtack" 
                         (click)="onTileClick({x:rowX, y:rowY})"
-                        (keydown)="onTileClick({x:rowX, y:rowY})">
+                        (keydown)="onTileClick({x:rowX, y:rowY})">{{ rowX }} | {{ rowY }}
                     </div>
                 }
             }

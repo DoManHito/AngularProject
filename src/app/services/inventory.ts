@@ -39,7 +39,7 @@ export class InventoryService {
       defense: 5 + level * 1.5,
       health: 50 + level * 10,
       currentHealth: 50 + level * 10,
-      speed: 2,
+      speed: 3,
       image: UNIT_ICONS.warrior[race],
       race: race,
       pos: {x:0,y:0},
