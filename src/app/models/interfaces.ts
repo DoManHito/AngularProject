@@ -25,6 +25,7 @@ export interface Spell{
   name: string;
   type: string;
   icon: string;
+  range: Point[];
 }
 
 // Unit stats
@@ -38,6 +39,7 @@ export interface Unit {
   type: 'warrior' | 'archer' | 'mage';
   level: number;
   xp: number;
+  xpForLvl: number;
   damage: number; 
   defense: number;
   health: number;
@@ -91,5 +93,6 @@ export interface Tile {
 export interface BatleFloor{
   type: 'arena-floor' | 'arena-rock';
   isPassable: boolean;
-  status?: boolean;
+  isProcessing?: boolean;
+  isAtack?: boolean;
 }

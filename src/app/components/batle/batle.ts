@@ -1,7 +1,8 @@
 import { Component, computed, effect, signal } from '@angular/core';
 import { GameStateService } from '../../services/game-state';
-import { BatleFloor, Point, Unit } from '../../models/interfaces';
+import { BatleFloor, Point, Spell, Unit } from '../../models/interfaces';
 import { InventoryService } from '../../services/inventory';
+import { MapService } from '../../services/map';
 
 @Component({
   selector: 'app-batle',
@@ -13,6 +14,8 @@ import { InventoryService } from '../../services/inventory';
 export class BatleComponent {
   isStats = signal<boolean>(false);
   selectedUnitId: string | undefined = undefined;
+  posiblePath: Point[] | undefined = undefined;
+  activatedSpell: Spell | undefined = undefined;
 
   batleMap = signal<BatleFloor[][]>([]);
   unitsInBattle = signal<Unit[]>([]);
@@ -29,7 +32,7 @@ export class BatleComponent {
   readonly batleMapY = this.batleMapX / 2;
   readonly batleMapTileSize = 120;
 
-  constructor(public gameState : GameStateService, public inventory : InventoryService) {
+  constructor(public gameState : GameStateService, public inventory : InventoryService, public mapService : MapService) {
     document.documentElement.style.setProperty('--map-x', this.batleMapX.toString());
     document.documentElement.style.setProperty('--map-y', this.batleMapY.toString());
     document.documentElement.style.setProperty('--batle-tile-size', this.batleMapTileSize.toString() + 'px');
@@ -67,23 +70,14 @@ export class BatleComponent {
     if (nextUnit.race === 'human') {
         this.activatePosiblePath(nextUnit.pos, nextUnit.speed);
     } else {
-        this.clearPosiblePath();
         this.processEnemyTurn(nextUnit);
     }
-  }
-
-  // TODO action
-  processEnemyTurn(enemy: Unit) {
-    setTimeout(() => {
-      
-      this.finishAction(); 
-    }, 1000);
   }
 
   finishAction() {
     this.clearPosiblePath();
     this.activeUnit.set(null);
-    this.nextTurn();
+    setTimeout(() => this.nextTurn(), 100);
   }
 
   openStats(){
@@ -123,9 +117,8 @@ export class BatleComponent {
   }
 
   placeUnit(){
-    const playerUnits = this.inventory.units().map((unit, index) => ({
+    const playerUnits : Unit[] = this.inventory.units().map((unit, index) => ({
       ...unit,
-      id: unit.race + ' ' + index,
       pos: {x: index, y: 0}
     }))
 
@@ -133,7 +126,6 @@ export class BatleComponent {
 
     const enemyUnits = enemy.map((unit, index) => ({
       ...unit,
-      id: unit.race + ' ' + index,
       pos: {x: index, y: this.batleMapX - 1}
     }))
 
@@ -193,10 +185,13 @@ export class BatleComponent {
     if(!currentActive) return;
     if(currentActive.race !== 'human') return;
 
-    const distance = Math.abs(target.x - currentActive.pos.x) + Math.abs(target.y - currentActive.pos.y);
-    const unitAtTarget = this.getUnitAt(target);
+    const tile = this.batleMap()[target.x][target.y];
+    if(tile.isAtack){
+      this.doAtack();
+    }
+    this.clearActivatedSpells();
 
-    if(!unitAtTarget && distance <= currentActive.speed){
+    if(tile.isProcessing){
       this.changePosition(target);
     }
   }
@@ -210,7 +205,7 @@ export class BatleComponent {
         return u;
       })
     );
-    this.finishAction();
+    this.activeUnit.set(this.getUnitAt(target)!);
   }
 
   activatePosiblePath(startPos : Point, speed : number){
@@ -221,7 +216,8 @@ export class BatleComponent {
           
           return {
             ...tile,
-            status : (distance <= speed && tile.isPassable && !this.getUnitAt({x, y})),
+            isProcessing : ((distance <= speed && tile.isPassable && !this.getUnitAt({x, y})) 
+            || this.getUnitAt(startPos) === this.getUnitAt({x, y})),
           };
         })
       );
@@ -230,6 +226,125 @@ export class BatleComponent {
 
   clearPosiblePath(){
     this.batleMap.update(map => 
-      map.map(row => row.map(tile => ({ ...tile, status : false}))))
+      map.map(row => row.map(tile => ({ ...tile, isProcessing : undefined}))))
+  }
+
+  spellActivate(spell : Spell){
+    const activeUnit = this.activeUnit();
+    if(!activeUnit) return;
+
+    this.activatedSpell = spell;
+    const hitCoords = new Set(
+      spell.range.map(offset => `${activeUnit.pos.x + offset.x},${activeUnit.pos.y + offset.y}`)
+    );
+    
+    this.batleMap.update(map => {
+      return map.map((row, x) => 
+        row.map((tile, y) => {   
+          return {
+            ...tile,
+            isAtack: hitCoords.has(`${x},${y}`)
+          };
+        })
+      );
+    });
+  }
+
+  clearActivatedSpells(){
+    this.batleMap.update(map => 
+      map.map(row => row.map(tile => ({ ...tile, isAtack : undefined}))))
+  }
+
+  doAtack(){
+    const map = this.batleMap();
+  
+    this.unitsInBattle.update(units => units.map(unit => {
+      const tile = map[unit.pos.x][unit.pos.y];
+      
+      if (tile.isAtack) {
+        const damageTaken = this.activatedSpell!.damageFactor * this.activeUnit()!.damage; 
+        const newHealth = Math.max(0, unit.currentHealth - damageTaken);
+        
+        return { ...unit, currentHealth: newHealth };
+      }
+      return unit;
+    }));
+
+    this.checkDeads();
+    this.finishAction();
+
+  }
+
+  checkDeads(){
+    const deadUnits = this.unitsInBattle().filter(u => u.currentHealth <= 0);
+
+    if (deadUnits.length > 0) {
+      const totalXpGained = deadUnits.reduce((sum, unit) => sum + (unit.level * 100), 0);
+      const attackerId = this.activeUnit()?.id;
+
+      this.unitsInBattle.update(units => {
+        const aliveUnits = units.filter(u => u.currentHealth > 0);
+
+        return aliveUnits.map(u => {
+          if (u.id === attackerId) {
+            let updatedUnit = { ...u, xp: u.xp + totalXpGained };
+            
+            while (updatedUnit.xp >= updatedUnit.xpForLvl) {
+              updatedUnit = this.calculateLvlUp(updatedUnit);
+            }
+            return updatedUnit;
+          }
+          return u;
+        });
+      });
+    }
+    if(this.checkEndFight()) return;
+  }
+
+  checkEndFight() : boolean{
+    const enemy = this.unitsInBattle().filter(u => u.race === 'goblin');
+    this.activeUnit.set(null);
+    if(enemy.length === 0){
+      const tile = this.gameState.currentTile();
+      if(!tile) return false;
+      this.mapService.map()[tile.x][tile.y].content = undefined;
+      setTimeout(() => this.endBatle(), 1000);
+      return true;
+    }
+    const ally = this.unitsInBattle().filter(u => u.race === 'human');
+    if(ally.length === 0){
+      setTimeout(() => this.endBatle(), 1000);
+      return true;
+    }
+    return false;
+  }
+
+  calculateLvlUp(unit : Unit) : Unit {
+    return {
+      ...this.inventory.getUnit(unit.type, unit.level + 1, unit.race),
+      id: unit.id,
+      xp: unit.xp - unit.xpForLvl,
+      xpForLvl: Math.floor(unit.xpForLvl * Math.pow(1.5, unit.level + 1)),
+      pos: unit.pos,
+    };
+  }
+
+  endBatle(){
+    const survivors = this.unitsInBattle().filter(u => u.race === 'human');
+    this.inventory.units.update(inventoryUnits => {
+      return inventoryUnits.map(invUnit => {
+        const updatedUnit = survivors.find(s => s.id === invUnit.id);
+        return updatedUnit ? { ...updatedUnit } : invUnit;
+      });
+    });
+    this.gameState.isBatle.set(false);
+  }
+
+  // TODO action
+  processEnemyTurn(enemy: Unit) {
+    setTimeout(() => {
+      
+      this.finishAction(); 
+    }, 1000);
   }
 }

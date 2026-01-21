@@ -54,6 +54,17 @@
   animation: pulse 0.8s infinite alternate;
 }
 
+.tile.atack::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(255, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 3;
+  border: 2px inset rgba(255, 255, 255, 0.5);
+  animation: pulse 0.8s infinite alternate;
+}
+
 @keyframes pulse {
   from { opacity: 0.3; }
   to { opacity: 0.7; }
@@ -114,7 +125,7 @@
 
 .unit-stats {
   position: absolute;
-  bottom: 120%;
+  bottom: 100%;
   left: 50%;
   width: 140px;
   background: rgba(20, 20, 20, 0.95);
@@ -347,14 +358,14 @@
 
 .spell-tooltip {
   position: absolute;
-  bottom: -30px;
+  bottom: -40px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(0,0,0,0.8);
   color: white;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 13px;
   white-space: nowrap;
   opacity: 0;
   transition: opacity 0.2s;

@@ -104,7 +104,7 @@ export class MapService {
   // Start fight if monster on target
   isMonsterStartFight(target: Point){
     if (this.getType(target) === 'monster'){
-      this.gameState.startFigth();
+      this.gameState.startFigth(target);
     }
   }
 }

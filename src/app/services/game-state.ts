@@ -7,8 +7,10 @@ import { Point } from '../models/interfaces';
 export class GameStateService {
   public isBatle = signal<boolean>(false);
   public heroPosition = signal<Point>({ x : 0, y : 0 });
+  public currentTile = signal<Point | undefined>(undefined);
   
-  startFigth(){
+  startFigth(target : Point){
+    this.currentTile.set(target)
     this.isBatle.set(true);
   }
   endFight(){

@@ -1,5 +1,8 @@
-<button class="open-btn" (click)="gameState.endFight()">
-    End batle
+<button class="open-btn" (click)="endBatle()">
+    End batles
+</button>
+<button class="open-btn" (click)="finishAction()">
+    End turn
 </button>
 <button class="open-btn" (click)="openStats()">
     {{ isStats() ? 'Close stats' : 'Show stats' }}
@@ -12,7 +15,8 @@
                 @for (tile of row; track $index; let rowY = $index) {
                     <div class="tile" 
                         [class]="tile.type"
-                        [class.processing]="tile.status === true" 
+                        [class.processing]="tile.isProcessing" 
+                        [class.atack]="tile.isAtack" 
                         (click)="onTileClick({x:rowX, y:rowY})"
                         (keydown)="onTileClick({x:rowX, y:rowY})">
                     </div>
@@ -31,9 +35,14 @@
                             <div class="spells-container">
                                 @for (spell of unit.spells; track spell.name) {
                                     <div class="spell"
-                                        [class]="'type-' + spell.type">
+                                        [class]="'type-' + spell.type"
+                                        (click)="spellActivate(spell)"
+                                        (keydown)="spellActivate(spell)">
                                         <img [src]="spell.icon" [alt]="spell.name" />
-                                        <div class="spell-tooltip">{{ spell.name }}</div>
+                                        <div class="spell-tooltip">
+                                            <div>{{ spell.name }}</div>
+                                            <div>Damage: x{{ spell.damageFactor }}</div>
+                                        </div>
                                     </div>
                                 }
                             </div>
@@ -48,6 +57,7 @@
                             <div class="stats-row">HP: <span>{{ unit.currentHealth }}/{{ unit.health }}</span></div>
                             <div class="stats-row">DMG: <span>{{ unit.damage }}</span></div>
                             <div class="stats-row">SPD: <span>{{ unit.speed }}</span></div>
+                            <div class="stats-row">XP: <span>{{ unit.xp }}/{{ unit.xpForLvl }}</span></div>
                             <div class="stats-row">LVL: <span>{{ unit.level }}</span></div>
                         </div>
                     }
