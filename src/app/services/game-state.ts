@@ -8,6 +8,7 @@ export class GameStateService {
   public isBatle = signal<boolean>(false);
   public heroPosition = signal<Point>({ x : 0, y : 0 });
   public currentTile = signal<Point | undefined>(undefined);
+  public currentMoney = 100;
   
   startFigth(target : Point){
     this.currentTile.set(target)

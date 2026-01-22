@@ -40,6 +40,7 @@ export class WorldMapComponent{
         }
         await this.translateHero(tile);
         this.mapService.removeFog(tile);
+        this.mapService.isMoney(tile);
         this.mapService.isMonsterStartFight(tile);
       }
 

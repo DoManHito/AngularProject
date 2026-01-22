@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { InventoryService } from '../../services/inventory';
+import { GameStateService } from '../../services/game-state';
 
 @Component({
   selector: 'app-inventory',
@@ -9,7 +10,7 @@ import { InventoryService } from '../../services/inventory';
 })
 export class InventoryComponent {
   isOpen = false;
-  constructor(public inventoryService : InventoryService) {}
+  constructor(public inventoryService : InventoryService, public gameState : GameStateService) {}
   toggleInventory(){
     this.isOpen = !this.isOpen;
   }

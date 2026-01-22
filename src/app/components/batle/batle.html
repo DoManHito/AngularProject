@@ -8,6 +8,16 @@
     {{ isStats() ? 'Close stats' : 'Show stats' }}
 </button>
 
+<div class="chat-container">
+  <div class="messages-list">
+    @for (msg of socketService.messages(); track $index) {
+      <p><strong>{{msg.user}}:</strong> {{msg.text}} <small>{{msg.time}}</small></p>
+    }
+  </div>
+  <input [value]="chatMessage()" placeholder="Напиши сообщение...">
+  <button (click)="send()">Отправить</button>
+</div>
+
 <div class="game-wrapper">
     <div class="batle-container">
         <div class="battle-grid">
@@ -18,7 +28,7 @@
                         [class.processing]="tile.isProcessing" 
                         [class.atack]="tile.isAtack" 
                         (click)="onTileClick({x:rowX, y:rowY})"
-                        (keydown)="onTileClick({x:rowX, y:rowY})">{{ rowX }} | {{ rowY }}
+                        (keydown)="onTileClick({x:rowX, y:rowY})">
                     </div>
                 }
             }

@@ -3,6 +3,7 @@ import { GameStateService } from '../../services/game-state';
 import { BatleFloor, Point, Spell, Unit } from '../../models/interfaces';
 import { InventoryService } from '../../services/inventory';
 import { MapService } from '../../services/map';
+import { SocketService } from '../../services/socket';
 
 @Component({
   selector: 'app-batle',
@@ -12,14 +13,15 @@ import { MapService } from '../../services/map';
 })
 
 export class BatleComponent {
-  isStats = signal<boolean>(false);
   selectedUnitId: string | undefined = undefined;
   posiblePath: Point[] | undefined = undefined;
   activatedSpell: Spell | undefined = undefined;
 
+  isStats = signal<boolean>(false);
   batleMap = signal<BatleFloor[][]>([]);
   unitsInBattle = signal<Unit[]>([]);
   activeUnit = signal<Unit | null>(null);
+  chatMessage = signal<string>('');
 
   currentTurnIndex = 0;
 
@@ -32,7 +34,11 @@ export class BatleComponent {
   readonly batleMapY = this.batleMapX / 2;
   readonly batleMapTileSize = 120;
 
-  constructor(public gameState : GameStateService, public inventory : InventoryService, public mapService : MapService) {
+  constructor(
+    public gameState : GameStateService, 
+    public inventory : InventoryService, 
+    public mapService : MapService,
+    public socketService : SocketService) {
     document.documentElement.style.setProperty('--map-x', this.batleMapX.toString());
     document.documentElement.style.setProperty('--map-y', this.batleMapY.toString());
     document.documentElement.style.setProperty('--batle-tile-size', this.batleMapTileSize.toString() + 'px');
@@ -47,6 +53,13 @@ export class BatleComponent {
       }
     })
   };
+
+  send() {
+    if (this.chatMessage().trim()) {
+      this.socketService.sendMessage('Player 1', this.chatMessage());
+      this.chatMessage.set('');
+    }
+  }
 
   startBattle() {
     this.currentTurnIndex = -1;
@@ -137,7 +150,7 @@ export class BatleComponent {
     
     const avgLevel = Math.round(playerUnits.reduce((sum, u) => sum + u.level, 0) / playerUnits.length);
 
-    const enemyCount = Math.max(1, playerUnits.length + (Math.floor(Math.random() * 4) - 1));
+    const enemyCount = Math.max(1, playerUnits.length + (Math.floor(Math.random() * 2) - 1));
 
     const types = ['warrior', 'archer', 'mage'];
 
@@ -354,29 +367,111 @@ export class BatleComponent {
   }
 
   processEnemyTurn(enemy: Unit) {
-    setTimeout(() => {
-      const units = this.unitsInBattle();
-      const target = this.findClosestTarget(enemy, units);
+    const target = this.findClosestTarget(enemy, this.unitsInBattle());
+    if (!target) return this.finishAction();
 
-      if (!target) {
+    const bestSpell = this.getBestAvailableSpell(enemy, target);
+
+    const goalPoint = this.findBestPosition(enemy, target, bestSpell);
+
+    this.moveEnemyTowardsPoint(enemy, goalPoint, (updatedEnemy) => {
+      const distance = Math.abs(target.pos.x - updatedEnemy.pos.x) + Math.abs(target.pos.y - updatedEnemy.pos.y);
+      const canHitNow = bestSpell 
+        ? bestSpell.range.some(o => (updatedEnemy.pos.x - o.x === target.pos.x) && (updatedEnemy.pos.y - o.y === target.pos.y))
+        : distance === 1;
+
+      if (canHitNow) {
+        this.performEnemyAttack(updatedEnemy, target, bestSpell);
+      } else {
         this.finishAction();
+      }
+    });
+  }
+
+  performEnemyAttack(attacker: Unit, victim: Unit, spell?: Spell) {
+    setTimeout(() => {
+      if (spell) {
+        const hitCoords = new Set(
+          spell.range.map(offset => `${attacker.pos.x - offset.x},${attacker.pos.y - offset.y}`)
+        );
+
+        this.batleMap.update(map => map.map((row, x) => 
+          row.map((tile, y) => ({
+            ...tile,
+            isAtack: hitCoords.has(`${x},${y}`)
+          }))
+        ));
+
+        setTimeout(() => {
+          this.applyDamage(attacker, spell, hitCoords);
+        }, 500);
+
+      } else {
+        const hitCoords = new Set([`${victim.pos.x},${victim.pos.y}`]);
+        this.applyDamage(attacker, undefined, hitCoords);
+      }
+    }, 1000);
+  }
+
+  moveEnemyTowardsPoint(attacker: Unit, goal: Point, onComplete: (u: Unit) => void) {
+    let stepsLeft = attacker.speed;
+
+    const step = () => {
+      const diffX = goal.x - attacker.pos.x;
+      const diffY = goal.y - attacker.pos.y;
+
+      if ((diffX === 0 && diffY === 0) || stepsLeft <= 0) {
+        onComplete(attacker);
         return;
       }
 
-      const bestSpell = this.getBestAvailableSpell(enemy, target);
-      const distance = Math.abs(target.pos.x - enemy.pos.x) + Math.abs(target.pos.y - enemy.pos.y);
+      let nextX = attacker.pos.x + Math.sign(diffX);
+      let nextY = attacker.pos.y + Math.sign(diffY);
 
-      // TODO loop
-      if (bestSpell) {
-        this.performEnemyAttack(enemy, target, bestSpell);
+      if (!this.isTileFree(nextX, nextY)) {
+          nextX = attacker.pos.x;
+          nextY = attacker.pos.y + (diffY === 0 ? 0 : Math.sign(diffY));
       }
-      else if (distance <= 1) {
-        this.performEnemyAttack(enemy, target);
+
+      if (this.isTileFree(nextX, nextY)) {
+        this.changePosition({ x: nextX, y: nextY });
+        attacker.pos = { x: nextX, y: nextY };
+        stepsLeft--;
+        setTimeout(step, 250);
       } else {
-        this.moveEnemyTowards(enemy, target);
+        onComplete(attacker);
       }
+    };
+    step();
+  }
 
-    }, 1000);
+  findBestPosition(attacker: Unit, target: Unit, spell?: Spell): Point {
+    let bestPos = { ...attacker.pos };
+    let minSteps = 1000;
+
+    for (let x = 0; x < this.batleMapY; x++) {
+      for (let y = 0; y < this.batleMapX; y++) {
+        
+        if (this.isTileFree(x, y) || (x === attacker.pos.x && y === attacker.pos.y)) {
+          
+          let canHit = false;
+          if (spell) {
+            canHit = spell.range.some(offset => 
+              (x - offset.x === target.pos.x) && (y - offset.y === target.pos.y)
+            );
+          }
+
+          if (canHit) {
+            const stepsToPos = Math.abs(x - attacker.pos.x) + Math.abs(y - attacker.pos.y);
+            if (stepsToPos < minSteps) {
+              minSteps = stepsToPos;
+              bestPos = { x, y };
+            }
+          }
+        }
+      }
+    }
+    return bestPos;
   }
 
   findClosestTarget(me: Unit, allUnits: Unit[]): Unit | null {
@@ -396,61 +491,10 @@ export class BatleComponent {
     return closest;
   }
 
-  performEnemyAttack(attacker: Unit, victim: Unit, spell?: Spell) {
-    
-    if (spell) {
-      const hitCoords = new Set(
-        spell.range.map(offset => `${attacker.pos.x - offset.x},${attacker.pos.y - offset.y}`)
-      );
-
-      this.batleMap.update(map => map.map((row, x) => 
-        row.map((tile, y) => ({
-          ...tile,
-          isAtack: hitCoords.has(`${x},${y}`)
-        }))
-      ));
-
-      setTimeout(() => {
-        this.applyDamage(attacker, spell, hitCoords);
-      }, 500);
-
-    } else {
-      const hitCoords = new Set([`${victim.pos.x},${victim.pos.y}`]);
-      this.applyDamage(attacker, undefined, hitCoords);
-    }
-  }
-
   getBestAvailableSpell(attacker: Unit, target: Unit): Spell | undefined {
     if (!attacker.spells || attacker.spells.length === 0) return undefined;
 
-    return attacker.spells.find(spell => {
-      return spell.range.some(offset => {
-        const hitX = attacker.pos.x - offset.x;
-        const hitY = attacker.pos.y - offset.y;
-        return hitX === target.pos.x && hitY === target.pos.y;
-      });
-    });
-  }
-
-  moveEnemyTowards(attacker: Unit, target: Unit) {
-    let newX = attacker.pos.x;
-    let newY = attacker.pos.y;
-
-    const diffX = attacker.pos.x - target.pos.x;
-    const diffY = attacker.pos.y - target.pos.y;
-
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-      newX -= Math.sign(diffX);
-    } else {
-      newY -=  Math.sign(diffY);
-    }
-
-    alert(newX + ' ' + newY)
-    if (this.isTileFree(newX, newY)) {
-      this.changePosition({x: newX, y: newY})
-    }
-
-    setTimeout(() => this.finishAction(), 500);
+    return attacker.spells[0];
   }
 
   isTileFree(x: number, y: number): boolean {
@@ -458,13 +502,14 @@ export class BatleComponent {
     return !this.unitsInBattle().some(u => u.pos.x === x && u.pos.y === y && u.currentHealth > 0);
   }
 
-  private applyDamage(attacker: Unit, spell: Spell | undefined, hitCoords: Set<string>) {
+  applyDamage(attacker: Unit, spell: Spell | undefined, hitCoords: Set<string>) {
     this.unitsInBattle.update(units => units.map(u => {
       if (hitCoords.has(`${u.pos.x},${u.pos.y}`)) {
         
         let damage = attacker.damage;
         
         if (spell) {
+          this.spellActivate(spell)
           damage = Math.round(damage * spell.damageFactor);
         }
 

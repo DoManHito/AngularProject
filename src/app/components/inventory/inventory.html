@@ -1,6 +1,8 @@
+<div class="money">{{ gameState.currentMoney }}🪙</div>
 <button class="open-btn" (click)="toggleInventory()">
   {{ isOpen ? 'Close' : 'Inventory' }}
 </button>
+
 
 @if (isOpen) {
   <div class="inventory-window">

@@ -25,7 +25,7 @@ export class MapService {
   private generateMap() {
     this.generateArea();
     this.removeFog({x : 1, y: 1});
-    this.removeAllFog();
+    //this.removeAllFog();
   }
 
   // Generate landscape
@@ -105,6 +105,14 @@ export class MapService {
   isMonsterStartFight(target: Point){
     if (this.getType(target) === 'monster'){
       this.gameState.startFigth(target);
+    }
+  }
+
+  // Get money from bag
+  isMoney(target: Point){
+    if (this.getType(target) === 'resource'){
+      this.gameState.currentMoney += 100;
+      this.map()[target.x][target.y].content = undefined;
     }
   }
 }
