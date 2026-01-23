@@ -51,7 +51,7 @@ export class MapService {
   private generateRandomContent() {
     const rand = Math.random();
     if (rand > 0.95) return { id: '1', type: 'resource', value: 500, icon: '💰' } as const;
-    if (rand > 0) return { id: '2', type: 'monster', value: 'Goblins', icon: '👺' } as const;
+    if (rand > 0.88) return { id: '2', type: 'monster', value: 'Goblins', icon: '👺' } as const;
     return undefined;
   }
 

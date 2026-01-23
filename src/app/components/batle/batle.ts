@@ -21,7 +21,6 @@ export class BatleComponent {
   batleMap = signal<BatleFloor[][]>([]);
   unitsInBattle = signal<Unit[]>([]);
   activeUnit = signal<Unit | null>(null);
-  chatMessage = signal<string>('');
 
   currentTurnIndex = 0;
 
@@ -53,13 +52,6 @@ export class BatleComponent {
       }
     })
   };
-
-  send() {
-    if (this.chatMessage().trim()) {
-      this.socketService.sendMessage('Player 1', this.chatMessage());
-      this.chatMessage.set('');
-    }
-  }
 
   startBattle() {
     this.currentTurnIndex = -1;

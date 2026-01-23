@@ -3,11 +3,12 @@ const http = require('node:http');
 const { Server } = require('socket.io');
 
 const app = express();
+const users = new Map();
 const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:4200", 
+        origin: "*", 
         methods: ["GET", "POST"]
     }
 });
@@ -28,7 +29,14 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('set_username', (username) => {
+        users.set(socket.id, username); 
+        io.emit('update_user_list', Array.from(users.values()));
+    });
+
     socket.on('disconnect', () => {
+        users.delete(socket.id);
+        io.emit('update_user_list', Array.from(users.values()));
         console.log('User disconnected');
     });
 });

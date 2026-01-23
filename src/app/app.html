@@ -1,3 +1,46 @@
+@if (!socketService.currentUser()) {
+  <div class="login-overlay">
+    <div class="login-card">
+      <h2>Login</h2>
+      <p>Enter your name</p>
+      
+      <input #nameInput 
+             (keyup.enter)="onLogin(nameInput.value)"
+             type="text" 
+             placeholder="Name...">
+             
+      <button (click)="onLogin(nameInput.value)">Start journey</button>
+    </div>
+  </div>
+} @else {
+  <div class="game-layout">
+    <aside class="sidebar">
+       <h3>Player online</h3>
+       <ul class="user-list">
+         @for (user of socketService.onlineUsers(); track user) {
+           <li [class.is-me]="user === socketService.currentUser()">
+             {{ user }} {{ user === socketService.currentUser() ? '(Вы)' : '' }}
+           </li>
+         }
+       </ul>
+    </aside>
+
+    <main class="battle-area">
+       </main>
+  </div>
+}
+
+<div class="chat-container">
+  <div class="messages-list">
+    @for (msg of socketService.messages(); track $index) {
+      <p><strong>{{msg.user}}:</strong> {{msg.text}} <small>{{msg.time}}</small></p>
+    }
+  </div>
+  <input [value]="chatMessage()" placeholder="Write massage...">
+  <button (click)="send()">Send</button>
+</div>
+
+
 <div class="game-wrapper">
   <div class="title-container">
     <h1 class="game-title">Heroes of Angular</h1>

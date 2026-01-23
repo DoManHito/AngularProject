@@ -5,13 +5,19 @@ import { io } from 'socket.io-client';
 export class SocketService {
   private readonly socket = io('http://localhost:3000');
   
-  // Сигнал для хранения сообщений
   public messages = signal<{user: string, text: string, time: string}[]>([]);
+  public onlineUsers = signal<string[]>([]);
+  public currentUser = signal<string | null>(null);
 
   constructor() {
-    this.socket.on('receive_message', (data) => {
-      this.messages.update(prev => [...prev, data]);
+    this.socket.on('update_user_list', (users: string[]) => {
+      this.onlineUsers.set(users);
     });
+  }
+
+  login(username: string) {
+    this.currentUser.set(username);
+    this.socket.emit('set_username', username);
   }
 
   sendMessage(user: string, text: string) {
