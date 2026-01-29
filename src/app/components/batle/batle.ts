@@ -1,21 +1,26 @@
-import { Component, computed, effect, signal } from '@angular/core';
+import { Component, computed, effect, signal, ViewChild, ElementRef } from '@angular/core';
 import { GameStateService } from '../../services/game-state';
 import { BatleFloor, Point, Spell, Unit } from '../../models/interfaces';
 import { InventoryService } from '../../services/inventory';
 import { MapService } from '../../services/map';
 import { SocketService } from '../../services/socket';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-batle',
-  imports: [],
+  imports: [FormsModule, CommonModule],
   templateUrl: './batle.html',
   styleUrl: './batle.css',
 })
 
 export class BatleComponent {
+  @ViewChild('battleChatScroll') chatScroll!: ElementRef;
+
   selectedUnitId: string | undefined = undefined;
   posiblePath: Point[] | undefined = undefined;
   activatedSpell: Spell | undefined = undefined;
+  chatMessage = '';
 
   isStats = signal<boolean>(false);
   batleMap = signal<BatleFloor[][]>([]);
@@ -51,11 +56,56 @@ export class BatleComponent {
         setTimeout(() => this.startBattle(), 100);
       }
     })
+
+    this.socketService.socket.on('opponent_action', (data) => {
+      const actingUnit = this.unitsInBattle().find(u => u.id === data.payload.unitId);
+      if (actingUnit) {
+        this.activeUnit.set(actingUnit);
+      }
+
+      if (data.type === 'move') {
+        this.changePosition(data.payload.target, false);
+        this.finishAction();
+      } else if (data.type === 'attack') {
+        if (data.payload.spellId) {
+          const spell = this.activeUnit()?.spells.find(s => s.name === data.payload.spellId);
+          if (spell) {
+            this.spellActivate(spell);
+            setTimeout(() => {
+                this.doAtack(false);
+            }, 500); 
+            return; 
+          }
+        }
+        this.doAtack(false);
+      }
+    });
   };
+
+  isMyTurn(): boolean {
+    const active = this.activeUnit();
+    const me = this.socketService.currentUser();
+    return active !== null && active.owner === me;
+  }
 
   startBattle() {
     this.currentTurnIndex = -1;
     this.nextTurn();
+  }
+
+  sendBattleMsg() {
+      if (this.chatMessage.trim()) {
+          this.socketService.sendBattleMessage(this.chatMessage);
+          this.chatMessage = '';
+          this.scrollToBottom();
+      }
+  }
+
+  private scrollToBottom() {
+      setTimeout(() => {
+          const el = this.chatScroll.nativeElement;
+          el.scrollTop = el.scrollHeight;
+      }, 50);
   }
 
   nextTurn() {
@@ -63,7 +113,6 @@ export class BatleComponent {
     if (queue.length === 0) return;
 
     this.currentTurnIndex++;
-    
     if (this.currentTurnIndex >= queue.length) {
       this.currentTurnIndex = 0;
     }
@@ -72,16 +121,21 @@ export class BatleComponent {
     this.activeUnit.set(nextUnit);
     this.selectedUnitId = nextUnit.id;
 
-    if (nextUnit.race === 'human') {
+    if (nextUnit.owner === this.socketService.currentUser()) {
         this.activatePosiblePath(nextUnit.pos, nextUnit.speed);
-    } else {
-        this.processEnemyTurn(nextUnit);
+    } 
+    else if (nextUnit.race === 'goblin'){
+      this.processEnemyTurn(nextUnit);
+    }
+    else {
+      this.clearPosiblePath();
     }
   }
 
   finishAction() {
     this.clearPosiblePath();
-    this.activeUnit.set(null);
+    this.clearActivatedSpells();
+    this.activatedSpell = undefined;
     setTimeout(() => this.nextTurn(), 100);
   }
 
@@ -122,19 +176,25 @@ export class BatleComponent {
   }
 
   placeUnit(){
-    const playerUnits : Unit[] = this.inventory.units().map((unit, index) => ({
+    const myUnitsData = this.inventory.units();
+    const opponentUnitsData = this.socketService.opponentUnits() ? this.socketService.opponentUnits() : this.generateEnemy(myUnitsData); 
+    const role = this.socketService.role();
+    const myY = (role === 'host') ? this.batleMapX - 1 : 0;
+    const opponentY = (role === 'host') ? 0 : this.batleMapX - 1;
+
+    const myUnits: Unit[] = myUnitsData.map((unit, index) => ({
       ...unit,
-      pos: {x: index, y: 0}
-    }))
+      owner: this.socketService.currentUser()!,
+      pos: { x: index, y: myY }
+    }));
 
-    const enemy = this.generateEnemy(playerUnits);
-
-    const enemyUnits = enemy.map((unit, index) => ({
+    const opponentUnits: Unit[] = opponentUnitsData!.map((unit, index) => ({
       ...unit,
-      pos: {x: index, y: this.batleMapX - 1}
-    }))
+      owner: this.socketService.opponentName()!,
+      pos: { x: index, y: opponentY }
+    }));
 
-    this.unitsInBattle.set([...playerUnits, ...enemyUnits])
+    this.unitsInBattle.set([...myUnits, ...opponentUnits]);
   }
       
   generateEnemy(playerUnits: Unit[]): Unit[] {
@@ -185,23 +245,25 @@ export class BatleComponent {
   }
 
   onTileClick(target : Point){
+    if (!this.isMyTurn()) return;
     const currentActive = this.activeUnit();
-
     if(!currentActive) return;
     if(currentActive.race !== 'human') return;
 
     const tile = this.batleMap()[target.x][target.y];
+
     if(tile.isAtack){
       this.doAtack();
+      this.clearActivatedSpells();
+      return;
     }
-    this.clearActivatedSpells();
 
     if(tile.isProcessing){
       this.changePosition(target);
     }
   }
 
-  changePosition(target: Point){
+  changePosition(target: Point, emit = true){
     this.unitsInBattle.update(units => 
       units.map(u => {
         if (this.activeUnit() === u){
@@ -211,6 +273,14 @@ export class BatleComponent {
       })
     );
     this.activeUnit.set(this.getUnitAt(target)!);
+
+    if (emit) {
+    this.socketService.sendBattleAction(
+      this.socketService.currentBattleId()!,
+      'move', 
+      { unitId: this.activeUnit()?.id, target }
+    );
+  }
   }
 
   activatePosiblePath(startPos : Point, speed : number){
@@ -239,8 +309,22 @@ export class BatleComponent {
     if(!activeUnit) return;
 
     this.activatedSpell = spell;
+    const isHost = this.socketService.role() === 'host';
+    const isMyUnit = activeUnit.owner === this.socketService.currentUser();
+
+    let direction = 1;
+    if (isMyUnit) {
+      direction = (isHost) ? 1 : -1; 
+    } else {
+      direction = (isHost) ? -1 : 1; 
+    }
+
     const hitCoords = new Set(
-      spell.range.map(offset => `${activeUnit.pos.x + offset.x},${activeUnit.pos.y + offset.y}`)
+      spell.range.map(offset => {
+        const targetX = activeUnit.pos.x + (offset.x * direction);
+        const targetY = activeUnit.pos.y + offset.y; 
+        return `${targetX},${targetY}`;
+      })
     );
     
     this.batleMap.update(map => {
@@ -260,7 +344,7 @@ export class BatleComponent {
       map.map(row => row.map(tile => ({ ...tile, isAtack : undefined}))))
   }
 
-  doAtack(){
+  doAtack(emit = true){
     const map = this.batleMap();
   
     this.unitsInBattle.update(units => units.map(unit => {
@@ -278,6 +362,13 @@ export class BatleComponent {
     this.checkDeads();
     this.finishAction();
 
+    if (emit) {
+      this.socketService.sendBattleAction(
+        this.socketService.currentBattleId()!, 
+        'attack', 
+        { spellId: this.activatedSpell?.name, unitId: this.activeUnit()?.id }
+      );
+    }
   }
 
   checkDeads(){
@@ -303,13 +394,7 @@ export class BatleComponent {
         });
       });
 
-      const newQueue = this.turnQueue();
-      const newIndex = newQueue.findIndex(u => u.id === attackerId);
-      if (newIndex === -1) {
-        this.currentTurnIndex--; 
-      } else {
-        this.currentTurnIndex = newIndex;
-      }
+      this.currentTurnIndex--;
     }
     if(this.checkEndFight()) return;
   }
@@ -344,7 +429,11 @@ export class BatleComponent {
     };
   }
 
-  endBatle(){
+  endBatle() {
+    this.socketService.leaveBattle();
+  }
+
+  endBatles(){
     const survivors = this.unitsInBattle().filter(u => u.race === 'human' && u.currentHealth > 0);
     this.inventory.units.update(inventoryUnits => {
       return inventoryUnits.map(invUnit => {

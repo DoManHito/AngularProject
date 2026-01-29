@@ -20,6 +20,12 @@ export class MapService {
     this.generateMap();
   }
 
+  rebuildMap(){
+    this.generateMap();
+    this.gameState.heroPosition.set({ x : 0, y : 0 });
+    this.gameState.currentTile.set(undefined);
+  }
+
   // TODO: rebuild to perlin noise
   // Generate map
   private generateMap() {

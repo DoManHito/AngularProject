@@ -93,19 +93,6 @@
   flex-direction: column;
 }
 
-.open-btn {
-  padding: 10px 25px;
-  margin: 5px;
-  background: linear-gradient(to bottom, #b8860b, #8b6508);
-  border: 1px solid #ffd700;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
 .money {
   display: inline-block;
   padding: 10px 25px;

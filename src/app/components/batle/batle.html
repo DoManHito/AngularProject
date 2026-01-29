@@ -1,5 +1,5 @@
 <button class="open-btn" (click)="endBatle()">
-    End batles
+    End batle
 </button>
 <button class="open-btn" (click)="finishAction()">
     End turn
@@ -7,6 +7,39 @@
 <button class="open-btn" (click)="openStats()">
     {{ isStats() ? 'Close stats' : 'Show stats' }}
 </button>
+
+@if (socketService.battleEndReason()) {
+    <div class="battle-end-overlay">
+        <div class="end-modal">
+            <h2>You won!</h2>
+            <p>Enemy run out a field.</p>
+            <button (click)="endBatle()">Return to lobby</button>
+        </div>
+    </div>
+}
+
+<div class="battle-chat-container">
+    <div class="chat-messages" #battleChatScroll>
+        @for (msg of socketService.battleMessages(); track $index) {
+            <div class="msg-item" [class.my-msg]="msg.user === socketService.currentUser()">
+                <div class="msg-header">
+                    <span class="msg-user">{{ msg.user }}</span>
+                    <span class="msg-time">{{ msg.time }}</span>
+                </div>
+                <div class="msg-text">{{ msg.text }}</div>
+            </div>
+        }
+    </div>
+
+    <div class="chat-input-area">
+        <input 
+            type="text" 
+            [(ngModel)]="chatMessage" 
+            (keyup.enter)="sendBattleMsg()"
+            placeholder="Write message...">
+        <button (click)="sendBattleMsg()">🡪</button>
+    </div>
+</div>
 
 <div class="game-wrapper">
     <div class="batle-container">
@@ -26,7 +59,7 @@
                 <div class="unit"
                     [style.transform]="getUnitStyle(unit)"
                     [style.transition]="'transform 1s'"
-                    [class.enemy]="unit.race === 'goblin'"
+                    [class.enemy-unit]="unit.owner !== socketService.currentUser()"
                     [class.active-unit-on-map]="activeUnit()?.id === unit.id">
                     <span class="unit-img">{{ unit.image }}</span>
 
@@ -73,9 +106,10 @@
     <div class="turn-queue">
         @for (unit of turnQueue().slice(0, 10); track unit.id; let i = $index) {
             <div class="queue-item" 
-                [class.enemy]="unit.race === 'goblin'"
+                [class.my-queue]="unit.owner === socketService.currentUser()"
+                [class.enemy-queue]="unit.owner !== socketService.currentUser()"
                 [class.active-turn]="activeUnit()?.id === unit.id"
-                [style.--i]="i">
+                [style.--i] color="i">
                 
                 <span class="queue-unit-img">{{ unit.image }}</span>
                 

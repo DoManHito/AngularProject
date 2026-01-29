@@ -1,3 +1,7 @@
+<button class="open-btn" (click)="mapService.rebuildMap()">
+    Rebuild map
+</button>
+
 <div class="map-container">
   <div class="grid">
     @for (row of mapService.map(); track $index; let x = $index){

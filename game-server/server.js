@@ -4,6 +4,9 @@ const { Server } = require('socket.io');
 
 const app = express();
 const users = new Map();
+const userUnits = new Map();
+const playerBattles = new Map();
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -18,16 +21,42 @@ io.on('connection', (socket) => {
 
     socket.on('join_battle', (battleId) => {
         socket.join(battleId);
-        console.log(`User ${socket.id} joined battle: ${battleId}`);
     });
 
     socket.on('send_message', (data) => {
-        io.to(data.battleId).emit('receive_message', {
+        io.emit('receive_message', {
             user: data.user,
             text: data.text,
             time: new Date().toLocaleTimeString()
         });
     });
+
+    socket.on('send_battle_message', (data) => {
+        const { battleId, text, user } = data;
+        io.to(battleId).emit('receive_battle_message', {
+            user: user,
+            text: text,
+            time: new Date().toLocaleTimeString()
+        });
+    });
+
+    socket.on('send_private_message', (data) => {
+    const { targetUsername, text } = data;
+    const senderName = users.get(socket.id);
+
+    const targetSocketId = [...users.entries()]
+        .find(([id, name]) => name === targetUsername)?.[0];
+
+    if (targetSocketId) {
+        const messagePayload = {
+            from: senderName,
+            text: text,
+            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        }
+        io.to(targetSocketId).emit('receive_private_message', messagePayload);
+        socket.emit('receive_private_message', { ...messagePayload, from: senderName });
+    }
+});
 
     socket.on('set_username', (username) => {
         users.set(socket.id, username); 
@@ -36,8 +65,78 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         users.delete(socket.id);
+        userUnits.delete(socket.id);
         io.emit('update_user_list', Array.from(users.values()));
-        console.log('User disconnected');
+    });
+
+    socket.on('send_challenge', (data) => {
+        const senderName = users.get(socket.id);
+
+        userUnits.set(socket.id, data.units);
+        
+        const targetSocketId = [...users.entries()]
+            .find(([id, name]) => name === data.targetUser)?.[0];
+
+        if (targetSocketId) {
+            io.to(targetSocketId).emit('receive_challenge', { 
+                from: senderName 
+            });
+        }
+    });
+    
+    socket.on('leave_battle', () => {
+        const battleId = playerBattles.get(socket.id);
+        if (battleId) {
+            socket.to(battleId).emit('battle_end_signal', { 
+                winner: true, 
+                reason: 'opponent_leave' 
+            });
+            socket.leave(battleId);
+            playerBattles.delete(socket.id);
+        }
+    });
+
+    socket.on('accept_challenge', (data) => {
+        const receiverSocketId = socket.id;
+        const receiverName = users.get(receiverSocketId);
+
+        userUnits.set(receiverSocketId, data.units);
+
+        const challengerSocketId = [...users.entries()]
+            .find(([id, name]) => name === data.challenger)?.[0];
+
+       if (challengerSocketId) {
+            const battleId = `battle_${Date.now()}`;
+            playerBattles.set(socket.id, battleId);
+            playerBattles.set(challengerSocketId, battleId);
+            
+            socket.join(battleId);
+            const challengerSocket = io.sockets.sockets.get(challengerSocketId);
+            if (challengerSocket) {
+                challengerSocket.join(battleId);
+            }
+
+            const challengerUnits = userUnits.get(challengerSocketId); 
+            const receiverUnits = userUnits.get(receiverSocketId);
+
+            io.to(challengerSocketId).emit('game_start', { 
+                battleId, 
+                opponentName: receiverName,
+                opponentUnits: receiverUnits, 
+                role: 'host' 
+            });
+
+            io.to(receiverSocketId).emit('game_start', { 
+                battleId, 
+                opponentName: data.challenger,
+                opponentUnits: challengerUnits, 
+                role: 'guest' 
+            });
+        }
+    });
+
+    socket.on('battle_action', (data) => {
+        socket.to(data.battleId).emit('opponent_action', data);
     });
 });
 

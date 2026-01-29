@@ -1,0 +1,82 @@
+<div class="lobby-container">
+  <h2>Players on-line ({{ socketService.onlineUsers().length }})</h2>
+  <div class="user-list">
+      @for (user of socketService.onlineUsers(); track user) {
+          @if (user !== socketService.currentUser()){
+              <div class="user-card">
+                <span>● {{ user }} </span>
+                <div class="actions">
+                    <button class="msg-btn" (click)="setPrivateTarget(user)">✉</button>
+                    <button (click)="socketService.sendChallenge(user)">Challenge</button>
+                </div>
+              </div>
+          }
+      }
+  </div>
+</div>
+
+<div class="chat-container">
+  <div class="chat-tabs">
+    <button [class.active]="activeTab === 'general'" (click)="activeTab = 'general'">General</button>
+    <button [class.active]="activeTab === 'private'" (click)="activeTab = 'private'">Private</button>
+  </div>
+
+  <div class="chat-layout">
+    @if (activeTab === 'private' && chatPartners.length > 0) {
+      <div class="conversation-list">
+        @for (partner of chatPartners; track partner) {
+          <div class="partner-tab" 
+               [class.selected]="selectedPrivateUser === partner"
+               (click)="selectedPrivateUser = partner"
+               (keydown)="selectedPrivateUser = partner">
+            {{ partner }}
+          </div>
+        }
+      </div>
+    }
+
+    <div class="messages-list" #scrollContainer>
+      @if (activeTab === 'general') {
+        @for (msg of socketService.messages(); track $index) {
+          <div class="message-wrapper" [class.my-message]="msg.user === socketService.currentUser()">
+            <div class="message-item">
+              <div class="message-header"><strong>{{ msg.user }}</strong> <small>{{ msg.time }}</small></div>
+              <p class="message-text">{{ msg.text }}</p>
+            </div>
+          </div>
+        }
+      } @else if (selectedPrivateUser) {
+        @for (msg of socketService.privateMessages()[selectedPrivateUser]; track $index) {
+          <div class="message-wrapper" [class.my-message]="msg.from.startsWith('To:')">
+            <div class="message-item private-item">
+              <div class="message-header"><strong>{{ msg.from }}</strong> <small>{{ msg.time }}</small></div>
+              <p class="message-text">{{ msg.text }}</p>
+            </div>
+          </div>
+        }
+      } @else {
+        <div class="empty-massage">Select user from the list</div>
+      }
+    </div>
+  </div>
+
+  <div class="input-area">
+    <input [(ngModel)]="chatMessage" (keyup.enter)="send()" 
+           [placeholder]="activeTab === 'general' ? 'Global message...' : 'Message to ' + (selectedPrivateUser || '...')">
+    <button (click)="send()">Send</button>
+  </div>
+</div>
+
+@if (socketService.incomingChallenge()) {
+  <div class="modal-overlay">
+    <div class="modal-content">
+      <h3>⚔️ CHALLENGE! ⚔️</h3>
+      <p>Player <strong>{{ socketService.incomingChallenge() }}</strong> wants to fight you!</p>
+      
+      <div class="modal-actions">
+        <button class="btn-accept" (click)="socketService.acceptChallenge()">ACCEPT</button>
+        <button class="btn-decline" (click)="socketService.declineChallenge()">RUN AWAY</button>
+      </div>
+    </div>
+  </div>
+}

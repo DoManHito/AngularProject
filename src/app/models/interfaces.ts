@@ -47,6 +47,7 @@ export interface Unit {
   speed: number;
   image: string; 
   spells: Spell[];
+  owner?: string;
 }
 
 export const UNIT_ICONS = {
@@ -95,4 +96,10 @@ export interface BatleFloor{
   isPassable: boolean;
   isProcessing?: boolean;
   isAtack?: boolean;
+}
+
+export interface Message {
+  user: string;
+  text: string;
+  time: string;
 }

@@ -3,3 +3,24 @@ body{
     background-color: #333;
     min-height: 100vh;
 }
+
+.open-btn {
+  padding: 10px 25px;
+  margin: 5px;
+  background: linear-gradient(to bottom, #b8860b, #8b6508);
+  border: 1px solid #ffd700;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.open-btn:hover {
+  filter: brightness(1.2);
+}
+
+.open-btn:active {
+  transform: translateY(1px);
+}
